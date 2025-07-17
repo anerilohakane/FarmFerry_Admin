@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +13,10 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  const { login: authLogin, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const validateForm = () => {
     const newErrors = {};
@@ -37,13 +43,17 @@ const LoginPage = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    setLoginError('');
+
+    try {
+      await authLogin(formData.email, formData.password);
       // Redirect to admin dashboard
-      window.location.href = '/admin';
-    }, 1500);
+      router.replace('/admin');
+    } catch (err) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -83,6 +93,10 @@ const LoginPage = () => {
             <p className="text-gray-300">Sign in to your admin account</p>
           </div>
           
+          {loginError && (
+            <div className="text-red-400 text-center mb-4 animate-pulse">{loginError}</div>
+          )}
+
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-white text-sm font-medium">Email Address</label>
@@ -165,20 +179,20 @@ const LoginPage = () => {
             </p>
           </div>
           
-          <div className="mt-6 flex items-center justify-center space-x-4">
+          {/* <div className="mt-6 flex items-center justify-center space-x-4">
             <div className="h-px bg-white/20 flex-1"></div>
             <span className="text-gray-400 text-sm">or</span>
             <div className="h-px bg-white/20 flex-1"></div>
-          </div>
+          </div> */}
           
-          <div className="mt-6 space-y-3">
+          {/* <div className="mt-6 space-y-3">
             <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-lg font-medium hover:bg-white/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
               Continue with Google
             </button>
             <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-lg font-medium hover:bg-white/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
               Continue with GitHub
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

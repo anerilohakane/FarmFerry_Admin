@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiEdit, FiTrash2, FiCheck, FiX, FiUserPlus, FiSearch, FiFilter, FiRefreshCw, FiInfo, FiTruck, FiMapPin, FiAward } from 'react-icons/fi';
 
 // Toast notification component
@@ -13,73 +13,10 @@ const Toast = ({ message, onClose }) => (
 );
 
 const DeliveryAssociateManagement = () => {
-  // Sample data for delivery associates
-  const initialAssociates = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 555-123-4567',
-      status: 'Active',
-      vehicleType: 'Motorcycle',
-      vehicleReg: 'MH12AB1234',
-      region: 'Green Valley',
-      specialization: 'Vegetables',
-      rating: 4.8,
-      ordersCompleted: 125,
-      joinedDate: '2023-01-15',
-      lastActive: '2024-06-10T10:30:00Z',
-      approved: true,
-      workload: 2,
-      profilePic: '',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1 555-987-6543',
-      status: 'Inactive',
-      vehicleType: 'Car',
-      vehicleReg: 'KA05CD5678',
-      region: 'Sunrise Farms',
-      specialization: 'Dairy',
-      rating: 4.5,
-      ordersCompleted: 89,
-      joinedDate: '2023-03-22',
-      lastActive: '2024-06-09T16:00:00Z',
-      approved: false,
-      workload: 0,
-      profilePic: '',
-    },
-    {
-      id: 3,
-      name: 'Robert Johnson',
-      email: 'robert@example.com',
-      phone: '+1 555-456-7890',
-      status: 'Suspended',
-      vehicleType: 'Bicycle',
-      vehicleReg: 'DL01EF4321',
-      region: 'Riverbank',
-      specialization: 'Poultry',
-      rating: 4.2,
-      ordersCompleted: 42,
-      joinedDate: '2023-05-10',
-      lastActive: '2024-06-08T08:15:00Z',
-      approved: true,
-      workload: 1,
-      profilePic: '',
-    },
-  ];
-
-  // Mock orders for assignment
-  const mockOrders = [
-    { id: 'ORD-1001', address: 'Farm Lane 12, Green Valley', notes: 'Handle with care', estimatedTime: '45 min' },
-    { id: 'ORD-1002', address: 'Sunrise Farms, Block B', notes: '', estimatedTime: '30 min' },
-    { id: 'ORD-1003', address: 'Riverbank, Plot 7', notes: 'Fragile eggs', estimatedTime: '60 min' },
-  ];
-
   // State management
-  const [associates, setAssociates] = useState(initialAssociates);
+  const [associates, setAssociates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [regionFilter, setRegionFilter] = useState('All');
@@ -107,18 +44,45 @@ const DeliveryAssociateManagement = () => {
     notes: '',
   });
 
+  useEffect(() => {
+    const fetchAssociates = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No token found. Please log in.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch('http://localhost:9000/api/v1/delivery-associates', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error('Failed to fetch associates');
+        const data = await res.json();
+        setAssociates(Array.isArray(data) ? data : data.data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssociates();
+  }, []);
+
   // Unique lists for filters
-  const regions = ['All', ...Array.from(new Set(associates.map(a => a.region)))];
-  const specializations = ['All', ...Array.from(new Set(associates.map(a => a.specialization)))];
+  const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || ''))).filter(Boolean)];
+  const specializations = ['All', ...Array.from(new Set(associates.map(a => a.specialization || ''))).filter(Boolean)];
 
   // Filter associates based on search and filters
   const filteredAssociates = associates.filter(associate => {
-    const matchesSearch = associate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      associate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      associate.phone.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || associate.status === statusFilter;
-    const matchesRegion = regionFilter === 'All' || associate.region === regionFilter;
-    const matchesSpec = specializationFilter === 'All' || associate.specialization === specializationFilter;
+    const matchesSearch = (associate.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (associate.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (associate.phone || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || (associate.isActive ? 'Active' : 'Inactive') === statusFilter || (associate.status === statusFilter);
+    const matchesRegion = regionFilter === 'All' || (associate.address?.region || '') === regionFilter;
+    const matchesSpec = specializationFilter === 'All' || (associate.specialization || '') === specializationFilter;
     return matchesSearch && matchesStatus && matchesRegion && matchesSpec;
   });
 
@@ -177,13 +141,28 @@ const DeliveryAssociateManagement = () => {
   };
 
   // Confirm approval change
-  const confirmApproval = () => {
-    const updatedAssociates = associates.map(associate =>
-      associate.id === selectedAssociate.id ? { ...associate, approved: !associate.approved } : associate
-    );
-    setAssociates(updatedAssociates);
-    setIsApprovalDialogOpen(false);
-    showToast(selectedAssociate.approved ? 'Approval revoked.' : 'Associate approved!');
+  const confirmApproval = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:9000/api/v1/delivery-associates/${selectedAssociate._id}/approve`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!res.ok) throw new Error('Failed to update approval');
+      const updated = await res.json();
+      setAssociates(prev =>
+        prev.map(a =>
+          a._id === selectedAssociate._id ? { ...a, isVerified: updated.data.isVerified } : a
+        )
+      );
+      setIsApprovalDialogOpen(false);
+      showToast(selectedAssociate.isVerified ? 'Approval revoked.' : 'Associate approved!');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   // Open assign order dialog
@@ -369,130 +348,134 @@ const DeliveryAssociateManagement = () => {
             Add New Associate
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-green-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Name</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Contact</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Region</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Specialization</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Workload</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Rating</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Approved</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Last Active</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-green-700 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAssociates.map((associate) => (
-                <tr key={associate.id} className="hover:bg-green-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {associate.profilePic ? (
-                        <img src={associate.profilePic} alt={associate.name} className="h-10 w-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium">
-                          {associate.name.charAt(0)}
-                        </div>
-                      )}
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{associate.name}</div>
-                        <div className="text-xs text-gray-500 flex items-center"><FiAward className="mr-1" />{associate.vehicleType} ({associate.vehicleReg})</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{associate.email}</div>
-                    <div className="text-sm text-gray-500">{associate.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 flex items-center"><FiMapPin className="mr-1" />{associate.region}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{associate.specialization}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      associate.status === 'Active' ? 'bg-green-100 text-green-800' :
-                      associate.status === 'Suspended' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`} title={associate.status}>
-                      {associate.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{associate.workload} active</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="text-sm font-medium text-gray-900 mr-2">{associate.rating}</div>
-                      <div className="w-20 bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-yellow-400 h-2.5 rounded-full" 
-                          style={{ width: `${(associate.rating / 5) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      associate.approved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`} title={associate.approved ? 'Approved' : 'Pending'}>
-                      {associate.approved ? 'Approved' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-xs text-gray-500">{formatLastActive(associate.lastActive)}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => openDetailsModal(associate)}
-                        className="text-green-600 hover:text-green-900"
-                        title="View Details"
-                        aria-label="View details"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openEditForm(associate)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Edit"
-                        aria-label="Edit associate"
-                      >
-                        <FiEdit className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => toggleApproval(associate)}
-                        className={associate.approved ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
-                        title={associate.approved ? "Revoke Approval" : "Approve"}
-                        aria-label={associate.approved ? "Revoke approval" : "Approve associate"}
-                      >
-                        {associate.approved ? <FiX className="h-5 w-5" /> : <FiCheck className="h-5 w-5" />}
-                      </button>
-                      <button
-                        onClick={() => openAssignOrderDialog(associate)}
-                        className="text-purple-600 hover:text-purple-900"
-                        title="Assign Order"
-                        aria-label="Assign order"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
+        {loading && <div>Loading...</div>}
+        {error && <div className="text-red-500">Error: {error}</div>}
+        {!loading && !error && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-green-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Name</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Contact</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Region</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Specialization</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Workload</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Rating</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Approved</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Last Active</th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-green-700 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredAssociates.length === 0 && (
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAssociates.map((associate) => (
+                  <tr key={associate._id} className="hover:bg-green-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {associate.profilePic ? (
+                          <img src={associate.profilePic} alt={associate.name} className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium">
+                            {associate.name?.charAt(0)}
+                          </div>
+                        )}
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{associate.name}</div>
+                          <div className="text-xs text-gray-500 flex items-center">{associate.vehicle?.type} ({associate.vehicle?.registration})</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{associate.email}</div>
+                      <div className="text-sm text-gray-500">{associate.phone}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900 flex items-center">{associate.address?.region}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">{associate.specialization || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        associate.isActive ? 'bg-green-100 text-green-800' :
+                        associate.status === 'Suspended' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`} title={associate.isActive ? 'Active' : associate.status || 'Inactive'}>
+                        {associate.isActive ? 'Active' : associate.status || 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">{associate.activeAssignments || 0} active</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="text-sm font-medium text-gray-900 mr-2">{associate.averageRating || 0}</div>
+                        <div className="w-20 bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-yellow-400 h-2.5 rounded-full" 
+                            style={{ width: `${((associate.averageRating || 0) / 5) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        associate.isVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`} title={associate.isVerified ? 'Approved' : 'Pending'}>
+                        {associate.isVerified ? 'Approved' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs text-gray-500">{formatLastActive(associate.lastLogin || associate.updatedAt)}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => openDetailsModal(associate)}
+                          className="text-green-600 hover:text-green-900"
+                          title="View Details"
+                          aria-label="View details"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => openEditForm(associate)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Edit"
+                          aria-label="Edit associate"
+                        >
+                          <FiEdit className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => toggleApproval(associate)}
+                          className={associate.isVerified ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
+                          title={associate.isVerified ? "Revoke Approval" : "Approve"}
+                          aria-label={associate.isVerified ? "Revoke approval" : "Approve associate"}
+                        >
+                          {associate.isVerified ? <FiX className="h-5 w-5" /> : <FiCheck className="h-5 w-5" />}
+                        </button>
+                        <button
+                          onClick={() => openAssignOrderDialog(associate)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Assign Order"
+                          aria-label="Assign order"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {filteredAssociates.length === 0 && !loading && !error && (
           <div className="text-center py-8">
             <p className="text-gray-500">No delivery associates found matching your criteria.</p>
           </div>
@@ -514,17 +497,17 @@ const DeliveryAssociateManagement = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-lg leading-6 font-medium text-gray-900">{selectedAssociate?.name}</h3>
-                        <p className="text-sm text-gray-500">{selectedAssociate?.vehicleType} ({selectedAssociate?.vehicleReg}) • {selectedAssociate?.status}</p>
-                        <p className="text-xs text-gray-500">Region: {selectedAssociate?.region} | Specialization: {selectedAssociate?.specialization}</p>
+                        <p className="text-sm text-gray-500">{selectedAssociate?.vehicle?.type} ({selectedAssociate?.vehicle?.registration}) • {selectedAssociate?.status}</p>
+                        <p className="text-xs text-gray-500">Region: {selectedAssociate?.address?.region} | Specialization: {selectedAssociate?.specialization}</p>
                       </div>
                       <div className="flex space-x-2">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          selectedAssociate?.approved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          selectedAssociate?.isVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {selectedAssociate?.approved ? 'Approved' : 'Pending Approval'}
+                          {selectedAssociate?.isVerified ? 'Approved' : 'Pending Approval'}
                         </span>
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          Rating: {selectedAssociate?.rating}
+                          Rating: {selectedAssociate?.averageRating || 0}
                         </span>
                       </div>
                     </div>
@@ -536,10 +519,10 @@ const DeliveryAssociateManagement = () => {
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-500">Performance</h4>
-                        <p className="mt-1 text-sm text-gray-900">Orders Completed: {selectedAssociate?.ordersCompleted}</p>
-                        <p className="mt-1 text-sm text-gray-900">Joined: {new Date(selectedAssociate?.joinedDate).toLocaleDateString()}</p>
-                        <p className="mt-1 text-sm text-gray-900">Workload: {selectedAssociate?.workload} active</p>
-                        <p className="mt-1 text-xs text-gray-500">Last Active: {formatLastActive(selectedAssociate?.lastActive)}</p>
+                        <p className="mt-1 text-sm text-gray-900">Orders Completed: {selectedAssociate?.ordersCompleted || 0}</p>
+                        <p className="mt-1 text-sm text-gray-900">Joined: {new Date(selectedAssociate?.createdAt).toLocaleDateString()}</p>
+                        <p className="mt-1 text-sm text-gray-900">Workload: {selectedAssociate?.activeAssignments || 0} active</p>
+                        <p className="mt-1 text-xs text-gray-500">Last Active: {formatLastActive(selectedAssociate?.lastLogin || selectedAssociate?.updatedAt)}</p>
                       </div>
                     </div>
                     <div className="mt-6">
@@ -755,9 +738,9 @@ const DeliveryAssociateManagement = () => {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${
-                    selectedAssociate?.approved ? 'bg-red-100' : 'bg-green-100'
+                    selectedAssociate?.isVerified ? 'bg-red-100' : 'bg-green-100'
                   } sm:mx-0 sm:h-10 sm:w-10`}>
-                    {selectedAssociate?.approved ? (
+                    {selectedAssociate?.isVerified ? (
                       <FiX className={`h-6 w-6 text-red-600`} />
                     ) : (
                       <FiCheck className={`h-6 w-6 text-green-600`} />
@@ -765,11 +748,11 @@ const DeliveryAssociateManagement = () => {
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
-                      {selectedAssociate?.approved ? 'Revoke Approval' : 'Approve Associate'}
+                      {selectedAssociate?.isVerified ? 'Revoke Approval' : 'Approve Associate'}
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        {selectedAssociate?.approved
+                        {selectedAssociate?.isVerified
                           ? `Are you sure you want to revoke ${selectedAssociate?.name}'s approval? They will no longer be able to receive new orders.`
                           : `Are you sure you want to approve ${selectedAssociate?.name}? They will be able to receive new orders.`}
                       </p>
@@ -781,13 +764,13 @@ const DeliveryAssociateManagement = () => {
                 <button
                   type="button"
                   className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 ${
-                    selectedAssociate?.approved ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                    selectedAssociate?.isVerified ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
                   } text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                    selectedAssociate?.approved ? 'focus:ring-red-500' : 'focus:ring-green-500'
+                    selectedAssociate?.isVerified ? 'focus:ring-red-500' : 'focus:ring-green-500'
                   } sm:ml-3 sm:w-auto sm:text-sm`}
                   onClick={confirmApproval}
                 >
-                  {selectedAssociate?.approved ? 'Revoke Approval' : 'Approve'}
+                  {selectedAssociate?.isVerified ? 'Revoke Approval' : 'Approve'}
                 </button>
                 <button
                   type="button"
@@ -832,9 +815,11 @@ const DeliveryAssociateManagement = () => {
                             required
                           >
                             <option value="">Select an order</option>
-                            {mockOrders.map(order => (
-                              <option key={order.id} value={order.id}>{order.id} - {order.address}</option>
-                            ))}
+                            {/* This part needs to be dynamic, fetching orders from backend */}
+                            {/* For now, using mockOrders as a placeholder */}
+                            {/* <option value="ORD-1001">ORD-1001 - Farm Lane 12, Green Valley</option> */}
+                            {/* <option value="ORD-1002">ORD-1002 - Sunrise Farms, Block B</option> */}
+                            {/* <option value="ORD-1003">ORD-1003 - Riverbank, Plot 7</option> */}
                           </select>
                         </div>
                         <div>

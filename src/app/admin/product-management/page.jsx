@@ -1,77 +1,13 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, Search, Filter, X } from 'lucide-react';
+import { getProducts, addProduct, updateProduct, deleteProduct, getCategories } from '../../../utils/api';
 
 const ProductManagementDashboard = () => {
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      category: "Fresh Produce",
-      price: 4.99,
-      stock: 250,
-      status: "Active",
-      description: "Fresh organic vine-ripened tomatoes, locally grown without pesticides. Perfect for salads and cooking.",
-      sku: "FP-TOM-001",
-      dateAdded: "2024-01-15"
-    },
-    {
-      id: 2,
-      name: "Free-Range Eggs",
-      category: "Dairy & Eggs",
-      price: 6.50,
-      stock: 48,
-      status: "Active",
-      description: "Farm-fresh free-range eggs from happy hens. Rich in nutrients and perfect for breakfast.",
-      sku: "DE-EGG-001",
-      dateAdded: "2024-01-10"
-    },
-    {
-      id: 3,
-      name: "Organic Milk",
-      category: "Dairy & Eggs",
-      price: 5.99,
-      stock: 0,
-      status: "Out of Stock",
-      description: "Creamy organic whole milk from grass-fed cows. Delivered fresh daily from local farms.",
-      sku: "DE-MLK-001",
-      dateAdded: "2024-01-08"
-    },
-    {
-      id: 4,
-      name: "Wheat Flour",
-      category: "Grains & Cereals",
-      price: 3.25,
-      stock: 120,
-      status: "Active",
-      description: "Stone-ground whole wheat flour from locally sourced wheat. Perfect for baking bread and pastries.",
-      sku: "GC-FLR-001",
-      dateAdded: "2024-01-05"
-    },
-    {
-      id: 5,
-      name: "Honey",
-      category: "Pantry",
-      price: 12.99,
-      stock: 35,
-      status: "Active",
-      description: "Pure wildflower honey harvested from local beehives. Raw and unfiltered for maximum health benefits.",
-      sku: "PT-HNY-001",
-      dateAdded: "2024-01-12"
-    },
-    {
-      id: 6,
-      name: "Organic Carrots",
-      category: "Fresh Produce",
-      price: 2.99,
-      stock: 180,
-      status: "Active",
-      description: "Crisp organic carrots, freshly harvested. Great for snacking, cooking, and juicing.",
-      sku: "FP-CAR-001",
-      dateAdded: "2024-01-14"
-    }
-  ]);
-
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [currentView, setCurrentView] = useState('list');
@@ -81,35 +17,123 @@ const ProductManagementDashboard = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  const categories = ['All', 'Fresh Produce', 'Dairy & Eggs', 'Grains & Cereals', 'Pantry', 'Meat & Poultry', 'Fruits', 'Vegetables'];
+  // Fetch products and categories from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [productData, categoryData] = await Promise.all([
+          getProducts(),
+          getCategories(),
+        ]);
+        setProducts(productData.map(p => ({
+          id: p._id,
+          name: p.name,
+          category: p.categoryId?.name || '',
+          categoryId: p.categoryId?._id || '',
+          price: p.price,
+          stock: p.stockQuantity,
+          status: p.stockQuantity > 0 ? 'Active' : 'Out of Stock',
+          description: p.description,
+          dateAdded: p.createdAt ? p.createdAt.split('T')[0] : '',
+          imageUrl: Array.isArray(p.images) && p.images.length > 0 ? (p.images.find(img => img.isMain)?.url || p.images[0].url) : null,
+        })));
+        setCategories(categoryData.map(c => ({
+          id: c._id,
+          name: c.name,
+        })));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const categoryNames = ['All', ...categories.map(c => c.name)];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'All' || product.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddProduct = (newProduct) => {
-    const product = {
-      ...newProduct,
-      id: Math.max(...products.map(p => p.id)) + 1,
-      dateAdded: new Date().toISOString().split('T')[0]
-    };
-    setProducts([...products, product]);
-    setShowAddForm(false);
+  // Add Product
+  const handleAddProduct = async (newProduct) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let categoryId = categories.find(c => c.name === newProduct.category)?.id;
+      if (!categoryId) categoryId = '';
+      const productToAdd = { ...newProduct, categoryId };
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const created = await addProduct(productToAdd, token);
+      setProducts(prev => [...prev, {
+        id: created._id,
+        name: created.name,
+        category: created.categoryId?.name || '',
+        categoryId: created.categoryId?._id || '',
+        price: created.price,
+        stock: created.stockQuantity,
+        status: created.stockQuantity > 0 ? 'Active' : 'Out of Stock',
+        description: created.description,
+        dateAdded: created.createdAt ? created.createdAt.split('T')[0] : '',
+      }]);
+      setShowAddForm(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEditProduct = (updatedProduct) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    setEditingProduct(null);
+  // Edit Product
+  const handleEditProduct = async (updatedProduct) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let categoryId = categories.find(c => c.name === updatedProduct.category)?.id;
+      if (!categoryId) categoryId = '';
+      const productToUpdate = { ...updatedProduct, categoryId };
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const updated = await updateProduct(updatedProduct.id, productToUpdate, token);
+      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? {
+        id: updated._id,
+        name: updated.name,
+        category: updated.categoryId?.name || '',
+        categoryId: updated.categoryId?._id || '',
+        price: updated.price,
+        stock: updated.stockQuantity,
+        status: updated.stockQuantity > 0 ? 'Active' : 'Out of Stock',
+        description: updated.description,
+        dateAdded: updated.createdAt ? updated.createdAt.split('T')[0] : '',
+      } : p));
+      setEditingProduct(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteProduct = () => {
-    setProducts(products.filter(p => p.id !== productToDelete.id));
-    setShowDeleteDialog(false);
-    setProductToDelete(null);
+  // Delete Product
+  const handleDeleteProduct = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      await deleteProduct(productToDelete.id, token);
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const ProductListTable = () => (
@@ -147,7 +171,7 @@ const ProductManagementDashboard = () => {
               onChange={(e) => setFilterCategory(e.target.value)}
               className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
-              {categories.map(category => (
+              {categoryNames.map(category => (
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
@@ -171,9 +195,15 @@ const ProductManagementDashboard = () => {
             {filteredProducts.map((product) => (
               <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                    <div className="text-sm text-gray-500">{product.sku}</div>
+                  <div className="flex items-center gap-3">
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400">N/A</div>
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -260,14 +290,6 @@ const ProductManagementDashboard = () => {
                   <p className="mt-1 text-sm text-gray-900">{product.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">SKU</label>
-                  <p className="mt-1 text-sm text-gray-900">{product.sku}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Category</label>
-                  <p className="mt-1 text-sm text-gray-900">{product.category}</p>
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700">Date Added</label>
                   <p className="mt-1 text-sm text-gray-900">{product.dateAdded}</p>
                 </div>
@@ -316,11 +338,10 @@ const ProductManagementDashboard = () => {
       stock: product?.stock || '',
       status: product?.status || 'Active',
       description: product?.description || '',
-      sku: product?.sku || ''
     });
 
     const handleSubmit = () => {
-      if (!formData.name || !formData.sku || !formData.category || !formData.price || !formData.stock || !formData.status) {
+      if (!formData.name || !formData.category || !formData.price || !formData.stock || !formData.status) {
         alert('Please fill in all required fields');
         return;
       }
@@ -367,19 +388,6 @@ const ProductManagementDashboard = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  SKU *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.sku}
-                  onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category *
                 </label>
                 <select
@@ -388,8 +396,8 @@ const ProductManagementDashboard = () => {
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {categories.filter(cat => cat !== 'All').map(category => (
-                    <option key={category} value={category}>{category}</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.name}>{category.name}</option>
                   ))}
                 </select>
               </div>

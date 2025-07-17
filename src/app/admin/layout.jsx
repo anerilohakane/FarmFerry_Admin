@@ -19,24 +19,13 @@ import {
   Sun,
   Maximize2,
   Minimize2,
-  Filter,
-  RefreshCw,
   HelpCircle,
-  MessageSquare,
-  Activity,
-  Zap,
   TrendingUp,
-  Star,
-  Heart,
-  Award,
   Truck,
   ClipboardList,
-  ThumbsUp,
-  ThumbsDown,
-  FileText,
-  MessageCircle,
   AlertCircle
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,79 +39,76 @@ const AdminLayout = ({ children }) => {
   const [activeItem, setActiveItem] = useState('Dashboard');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(12);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const router = useRouter();
 
-  // Enhanced sidebar items with all your management sections
+  // Enhanced sidebar items with better organization
   const sidebarItems = [
     { 
       icon: Home, 
       label: 'Dashboard', 
       active: activeItem === 'Dashboard',
-      description: 'Overview & Analytics'
+      description: 'Overview & Analytics',
+      route: '/admin'
     },
     { 
       icon: Users, 
       label: 'User Management',
       active: activeItem === 'User Management',
       description: 'Customers & Admins',
-      subItems: [
-        { label: 'Customers', icon: User },
-        { label: 'Admins', icon: User }
-      ]
+      route: '/admin/user-management'
     },
     { 
       icon: Truck, 
       label: 'Supplier Management',
       active: activeItem === 'Supplier Management',
       description: 'Manage suppliers',
-      badge: '5',
-      trend: '+2 new'
+      route: '/admin/supplier-management'
     },
     { 
       icon: Truck, 
       label: 'Delivery Associates',
       active: activeItem === 'Delivery Associates',
       description: 'Manage delivery team',
-      count: '24'
+      route: '/admin/delivery-associatemanagement'
     },
     { 
       icon: Package, 
       label: 'Product Management',
       active: activeItem === 'Product Management',
       description: 'Inventory & products',
-      count: '247'
+      route: '/admin/product-management'
     },
     { 
       icon: ClipboardList, 
       label: 'Category Management',
       active: activeItem === 'Category Management',
-      description: 'Product categories'
+      description: 'Product categories',
+      route: '/admin/category-management'
     },
     { 
       icon: ShoppingCart, 
       label: 'Order Management', 
-      badge: '12',
       active: activeItem === 'Order Management',
       description: 'Process orders',
-      trend: '+15%'
+      route: '/admin/order-management'
     },
     { 
       icon: BarChart3, 
       label: 'Reports & Analytics',
       active: activeItem === 'Reports & Analytics',
-      description: 'Sales & Performance'
+      description: 'Sales & Performance',
+      route: '/admin/reports-analytics'
     },
     { 
       icon: Settings, 
       label: 'Settings',
       active: activeItem === 'Settings',
-      description: 'System configuration'
+      description: 'System configuration',
+      route: '/admin/settings'
     },
   ];
 
-  // Sample notifications
+  // Enhanced notifications with better structure
   const initialNotifications = [
     {
       id: 1,
@@ -161,25 +147,34 @@ const AdminLayout = ({ children }) => {
     setNotifications(initialNotifications);
   }, []);
 
-  // Update time every second
+  // Enhanced auth protection
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.replace('/loginpage');
+      }
+    }
+  }, [router]);
 
-  // Handle fullscreen toggle
+  // Enhanced fullscreen handler
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => {
+        console.log('Error attempting to enable fullscreen:', err);
+      });
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch(err => {
+        console.log('Error attempting to exit fullscreen:', err);
+      });
     }
   };
 
+  // Enhanced notification management
   const unreadCount = notifications.filter(n => n.unread).length;
 
   const markAsRead = (id) => {
@@ -190,25 +185,59 @@ const AdminLayout = ({ children }) => {
     );
   };
 
-  const handleItemClick = (label) => {
-    setActiveItem(label);
-    setSidebarOpen(false);
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notification => ({ ...notification, unread: false }))
+    );
   };
-//   setTimeout(() => {
-//       setIsLoading(false);
-//       // Redirect to admin dashboard
-//       window.location.href = '/admin/usermanagement';
-//     }, 1000);
 
+  // Enhanced navigation handler
+  const handleItemClick = (item) => {
+    setActiveItem(item.label);
+    setSidebarOpen(false);
+    if (item.route) {
+      router.push(item.route);
+    }
+  };
 
+  // Enhanced logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.replace('/loginpage');
+  };
+
+  // Enhanced search handler
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchValue.trim()) {
+      // Implement search functionality here
+      console.log('Searching for:', searchValue);
+    }
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileOpen && !event.target.closest('.profile-dropdown')) {
+        setProfileOpen(false);
+      }
+      if (notificationOpen && !event.target.closest('.notification-dropdown')) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileOpen, notificationOpen]);
 
   return (
     <div className={`flex h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Enhanced Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 ${sidebarCollapsed ? 'w-16' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col`}>
+      <div className={`fixed inset-y-0 left-0 z-50 ${sidebarCollapsed ? 'w-16' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col`}>
+        
         {/* Sidebar Header */}
         <div className={`flex-shrink-0 flex items-center justify-between h-16 px-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
               <Package className="w-5 h-5 text-white" />
             </div>
@@ -218,16 +247,18 @@ const AdminLayout = ({ children }) => {
               </span>
             )}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={`hidden lg:block p-2 rounded-md hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'}`}
+              className={`hidden lg:block p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setSidebarOpen(false)}
-              className={`lg:hidden p-2 rounded-md hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'}`}
+              className={`lg:hidden p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+              title="Close sidebar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -237,65 +268,47 @@ const AdminLayout = ({ children }) => {
         {/* Online Status */}
         {!sidebarCollapsed && (
           <div className={`flex-shrink-0 px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 {onlineUsers} users online
               </span>
             </div>
           </div>
         )}
         
-        {/* Navigation - Scrollable Area */}
-        <div className="flex-1 overflow-y-auto">
-          <nav className="mt-8 px-4 space-y-2">
+        {/* Enhanced Navigation */}
+        <div className="flex-1 overflow-y-auto py-4">
+          <nav className="px-4 space-y-1">
             {sidebarItems.map((item, index) => (
               <div key={index} className="relative group">
                 <button
-                  onClick={() => handleItemClick(item.label)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
+                  onClick={() => handleItemClick(item)}
+                  className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
                     item.active 
-                      ? `${darkMode ? 'bg-green-900 text-green-400' : 'bg-green-50 text-green-700'} border-r-2 border-green-500 shadow-sm` 
+                      ? `${darkMode ? 'bg-green-900 text-green-400' : 'bg-green-50 text-green-700'} border-r-4 border-green-500 shadow-sm` 
                       : `${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-50'} hover:text-gray-900 hover:shadow-sm`
                   } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  title={sidebarCollapsed ? item.label : ''}
                 >
-                  <div className="flex items-center space-x-3">
-                    <item.icon className={`w-5 h-5 ${item.active ? 'animate-pulse' : ''}`} />
+                  <div className="flex items-center space-x-3 w-full">
+                    <item.icon className={`w-5 h-5 flex-shrink-0 ${item.active ? 'animate-pulse' : ''}`} />
                     {!sidebarCollapsed && (
-                      <div className="flex-1">
-                        <span className="font-medium">{item.label}</span>
+                      <div className="flex-1 text-left">
+                        <span className="font-medium block">{item.label}</span>
                         <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                           {item.description}
                         </p>
                       </div>
                     )}
                   </div>
-                  {!sidebarCollapsed && (
-                    <div className="flex items-center space-x-2">
-                      {item.badge && (
-                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.trend && (
-                        <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'} flex items-center`}>
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          {item.trend}
-                        </span>
-                      )}
-                      {item.count && (
-                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {item.count}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </button>
                 
-                {/* Tooltip for collapsed sidebar */}
+                {/* Enhanced Tooltip for collapsed sidebar */}
                 {sidebarCollapsed && (
-                  <div className="absolute left-16 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                    {item.label}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                    <div className="font-medium">{item.label}</div>
+                    <div className="text-xs text-gray-300">{item.description}</div>
                   </div>
                 )}
               </div>
@@ -303,7 +316,7 @@ const AdminLayout = ({ children }) => {
           </nav>
         </div>
 
-        {/* Sidebar Footer */}
+        {/* Enhanced Sidebar Footer */}
         {!sidebarCollapsed && (
           <div className={`flex-shrink-0 p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} text-center`}>
@@ -321,13 +334,14 @@ const AdminLayout = ({ children }) => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className={`lg:hidden p-2 rounded-md hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'}`}
+                className={`lg:hidden p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+                title="Open sidebar"
               >
                 <Menu className="w-5 h-5" />
               </button>
               
               {/* Enhanced Search */}
-              <div className="relative">
+              <form onSubmit={handleSearchSubmit} className="relative">
                 <div className={`flex items-center ${searchFocused ? 'w-80' : 'w-64'} transition-all duration-300`}>
                   <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                   <input
@@ -337,31 +351,29 @@ const AdminLayout = ({ children }) => {
                     onChange={(e) => setSearchValue(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
                     onBlur={() => setSearchFocused(false)}
-                    className={`w-full pl-10 pr-4 py-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-200'} border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200`}
+                    className={`w-full pl-10 pr-4 py-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-100 border-gray-200 placeholder-gray-500'} border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200`}
                   />
                   {searchValue && (
                     <button
+                      type="button"
                       onClick={() => setSearchValue('')}
-                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
+                      title="Clear search"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-              </div>
+              </form>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {/* Time Display */}
-              <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} hidden md:block`}>
-                {currentTime.toLocaleTimeString()}
-              </div>
-
-              {/* Quick Actions */}
+            <div className="flex items-center space-x-3">
+              {/* Enhanced Quick Actions */}
               <div className="flex items-center space-x-2">
                 <button
                   onClick={toggleFullscreen}
                   className={`p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+                  title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >
                   {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                 </button>
@@ -369,20 +381,22 @@ const AdminLayout = ({ children }) => {
                 <button
                   onClick={() => setDarkMode(!darkMode)}
                   className={`p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+                  title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
                   {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
               </div>
 
               {/* Enhanced Notifications */}
-              <div className="relative">
+              <div className="relative notification-dropdown">
                 <button
                   onClick={() => setNotificationOpen(!notificationOpen)}
                   className={`relative p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'text-gray-600'} transition-colors`}
+                  title="Notifications"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse font-medium">
                       {unreadCount}
                     </span>
                   )}
@@ -391,29 +405,41 @@ const AdminLayout = ({ children }) => {
                 {notificationOpen && (
                   <div className={`absolute right-0 mt-2 w-80 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-lg z-50`}>
                     <div className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
-                      <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Notifications</h3>
-                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {unreadCount} new
-                      </span>
+                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Notifications
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {unreadCount} new
+                        </span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
                           onClick={() => markAsRead(notification.id)}
-                          className={`px-4 py-3 hover:bg-gray-50 ${darkMode ? 'hover:bg-gray-700' : ''} cursor-pointer border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} last:border-b-0`}
+                          className={`px-4 py-3 hover:bg-gray-50 ${darkMode ? 'hover:bg-gray-700' : ''} cursor-pointer border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'} last:border-b-0 transition-colors`}
                         >
                           <div className="flex items-start space-x-3">
                             <div className={`p-2 rounded-lg bg-${notification.color}-100 ${darkMode ? 'bg-opacity-20' : ''}`}>
                               <notification.icon className={`w-4 h-4 text-${notification.color}-600`} />
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'} truncate`}>
                                   {notification.title}
                                 </h4>
                                 {notification.unread && (
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                                 )}
                               </div>
                               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
@@ -432,20 +458,21 @@ const AdminLayout = ({ children }) => {
               </div>
 
               {/* Enhanced Profile Dropdown */}
-              <div className="relative">
+              <div className="relative profile-dropdown">
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
                   className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 ${darkMode ? 'hover:bg-gray-700' : ''} transition-colors`}
+                  title="Profile menu"
                 >
                   <img
                     src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                     alt="Profile"
-                    className="w-8 h-8 rounded-full ring-2 ring-green-500 ring-offset-2"
+                    className="w-8 h-8 rounded-full ring-2 ring-green-500 ring-offset-2 object-cover"
                   />
                   <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} hidden md:block`}>
-                    Admin User
+                    Admin
                   </span>
-                  <ChevronDown className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-400'} transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-400'} transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {profileOpen && (
@@ -455,32 +482,39 @@ const AdminLayout = ({ children }) => {
                         <img
                           src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                           alt="Profile"
-                          className="w-10 h-10 rounded-full"
+                          className="w-10 h-10 rounded-full object-cover"
                         />
                         <div>
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Admin User</p>
-                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Super Admin</p>
+                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Admin User
+                          </p>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Super Admin
+                          </p>
                         </div>
                       </div>
                     </div>
                     <div className="py-2">
-                      <a href="#" className={`flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}>
+                      <button className={`w-full flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'} transition-colors`}>
                         <User className="w-4 h-4 mr-3" />
                         Profile
-                      </a>
-                      <a href="#" className={`flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}>
+                      </button>
+                      <button className={`w-full flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'} transition-colors`}>
                         <Settings className="w-4 h-4 mr-3" />
                         Settings
-                      </a>
-                      <a href="#" className={`flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}>
+                      </button>
+                      <button className={`w-full flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'} transition-colors`}>
                         <HelpCircle className="w-4 h-4 mr-3" />
                         Help & Support
-                      </a>
+                      </button>
                       <hr className={`my-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                      <a href="#" className={`flex items-center px-4 py-2 text-sm hover:bg-gray-100 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}>
+                      <button 
+                        onClick={handleLogout} 
+                        className={`w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 ${darkMode ? 'hover:bg-red-900/20' : ''} transition-colors`}
+                      >
                         <LogOut className="w-4 h-4 mr-3" />
-                        Sign out
-                      </a>
+                        Logout
+                      </button>
                     </div>
                   </div>
                 )}
@@ -489,13 +523,13 @@ const AdminLayout = ({ children }) => {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        {/* Enhanced Page Content */}
+        <main className={`flex-1 overflow-auto p-6 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
           {children}
         </main>
       </div>
 
-      {/* Sidebar Overlay */}
+      {/* Enhanced Sidebar Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300"
