@@ -87,8 +87,6 @@ const UserManagementDashboard = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-  const [showBlockDialog, setShowBlockDialog] = useState(false);
-  const [blockCustomer, setBlockCustomer] = useState(null);
   const [editFormData, setEditFormData] = useState({});
 
   // Filter and search customers
@@ -115,21 +113,6 @@ const UserManagementDashboard = () => {
     setSelectedCustomer(customer);
     setEditFormData(customer);
     setShowEditForm(true);
-  };
-
-  const handleBlockCustomer = (customer) => {
-    setBlockCustomer(customer);
-    setShowBlockDialog(true);
-  };
-
-  const confirmBlock = () => {
-    setCustomers(customers.map(customer => 
-      customer.id === blockCustomer.id 
-        ? { ...customer, status: customer.status === 'active' ? 'blocked' : 'active' }
-        : customer
-    ));
-    setShowBlockDialog(false);
-    setBlockCustomer(null);
   };
 
   const handleSaveEdit = () => {
@@ -324,63 +307,6 @@ const UserManagementDashboard = () => {
     </div>
   );
 
-  // Block Customer Dialog
-  const CustomerBlockDialog = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              {blockCustomer?.status === 'active' ? 'Block Customer' : 'Unblock Customer'}
-            </h2>
-            <p className="text-gray-600">
-              {blockCustomer?.status === 'active' 
-                ? 'Are you sure you want to block this customer?' 
-                : 'Are you sure you want to unblock this customer?'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <div className="flex items-center space-x-3">
-            <img 
-              src={blockCustomer?.avatar} 
-              alt={blockCustomer?.name}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div>
-              <p className="font-medium text-gray-800">{blockCustomer?.name}</p>
-              <p className="text-sm text-gray-600">{blockCustomer?.email}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={() => setShowBlockDialog(false)}
-            className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirmBlock}
-            className={`px-6 py-3 text-white rounded-lg transition-colors flex items-center space-x-2 ${
-              blockCustomer?.status === 'active' 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            <Ban size={20} />
-            <span>{blockCustomer?.status === 'active' ? 'Block' : 'Unblock'}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -497,17 +423,6 @@ const UserManagementDashboard = () => {
                         >
                           <Edit size={16} />
                         </button>
-                        <button
-                          onClick={() => handleBlockCustomer(customer)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            customer.status === 'active' 
-                              ? 'text-red-600 hover:text-red-900 hover:bg-red-50' 
-                              : 'text-green-600 hover:text-green-900 hover:bg-green-50'
-                          }`}
-                          title={customer.status === 'active' ? 'Block Customer' : 'Unblock Customer'}
-                        >
-                          <Ban size={16} />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -565,7 +480,6 @@ const UserManagementDashboard = () => {
       {/* Modals */}
       {showDetailsModal && <CustomerDetailsModal />}
       {showEditForm && <CustomerEditForm />}
-      {showBlockDialog && <CustomerBlockDialog />}
     </div>
   );
 };

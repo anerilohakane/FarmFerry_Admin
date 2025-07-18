@@ -155,3 +155,31 @@ export async function getCurrentUser(token) {
   const res = await apiRequest('/api/v1/auth/current-user', { method: 'GET', token });
   return res.data.user;
 } 
+
+// Analytics API utilities
+export async function getAdminDashboardStats(token) {
+  return apiRequest('/api/v1/admin/dashboard-stats', { method: 'GET', token });
+}
+
+// Revenue analytics
+export async function getAdminRevenueAnalytics(params = {}, token) {
+  const queryString = new URLSearchParams(params).toString();
+  return apiRequest(`/api/v1/admin/analytics/revenue${queryString ? `?${queryString}` : ''}`, { method: 'GET', token });
+}
+
+// Product analytics
+export async function getAdminProductAnalytics(params = {}, token) {
+  const queryString = new URLSearchParams(params).toString();
+  return apiRequest(`/api/v1/admin/analytics/products${queryString ? `?${queryString}` : ''}`, { method: 'GET', token });
+}
+
+// Customer analytics
+export async function getAdminCustomerAnalytics(params = {}, token) {
+  const queryString = new URLSearchParams(params).toString();
+  return apiRequest(`/api/v1/admin/analytics/customers${queryString ? `?${queryString}` : ''}`, { method: 'GET', token });
+}
+
+export async function getAdminCategoryAnalytics(params = {}, token) {
+  const queryString = new URLSearchParams(params).toString();
+  return apiRequest(`/api/v1/admin/analytics/categories?${queryString}`, { method: 'GET', token });
+} 

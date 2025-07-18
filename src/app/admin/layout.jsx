@@ -238,9 +238,15 @@ const AdminLayout = ({ children }) => {
         {/* Sidebar Header */}
         <div className={`flex-shrink-0 flex items-center justify-between h-16 px-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Package className="w-5 h-5 text-white" />
-            </div>
+            {/* Logo: only show when sidebar is not collapsed */}
+            {!sidebarCollapsed && (
+              <img
+                src="/images/Farm-Ferry-logo.jpeg"
+                alt="Farm Ferry Logo"
+                className="h-14 w-14 mr-2 object-contain rounded-full shadow-lg"
+              />
+            )}
+            {/* Sidebar title */}
             {!sidebarCollapsed && (
               <span className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} transition-opacity duration-300`}>
                 Farm Ferry Admin

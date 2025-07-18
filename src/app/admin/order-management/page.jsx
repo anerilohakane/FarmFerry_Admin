@@ -4,6 +4,49 @@ import React, { useState, useEffect } from 'react';
 import { Package, Eye, Edit3, Truck, Search, Filter, Calendar, MapPin, Phone, User, Clock, CheckCircle, AlertCircle, XCircle, Plus, X, Loader2 } from 'lucide-react';
 import { getAllOrders, getOrderById, updateOrderStatus, assignDeliveryAssociate, getAllDeliveryAssociates } from '../../../utils/api';
 
+const STATUS_TRANSITIONS_MAP = {
+  pending: ['processing', 'cancelled'],
+  processing: ['out_for_delivery', 'cancelled'],
+  out_for_delivery: ['delivered', 'failed'],
+  delivered: ['returned'],
+  cancelled: [],
+  returned: [],
+  failed: [],
+};
+
+const STATUS_TRANSITIONS = {
+  admin: ['pending', 'processing', 'out_for_delivery', 'delivered', 'cancelled', 'returned'],
+  supplier: ['processing', 'out_for_delivery', 'cancelled'],
+  deliveryAssociate: ['picked_up', 'on_the_way', 'delivered', 'failed'],
+  customer: ['cancelled', 'returned'],
+};
+
+const getAllowedStatusUpdates = (currentStatus, role) => {
+  if (role === 'admin') return STATUS_TRANSITIONS_MAP[currentStatus] || [];
+  if (role === 'supplier') {
+    if (["pending", "processing"].includes(currentStatus)) {
+      return STATUS_TRANSITIONS_MAP[currentStatus].filter(status => STATUS_TRANSITIONS.supplier.includes(status));
+    }
+    return [];
+  }
+  if (role === 'deliveryAssociate') {
+    if (currentStatus === 'out_for_delivery') {
+      return STATUS_TRANSITIONS_MAP[currentStatus].filter(status => STATUS_TRANSITIONS.deliveryAssociate.includes(status));
+    }
+    return [];
+  }
+  if (role === 'customer') {
+    if (["pending", "processing"].includes(currentStatus)) {
+      return STATUS_TRANSITIONS_MAP[currentStatus].filter(status => STATUS_TRANSITIONS.customer.includes(status));
+    }
+    if (currentStatus === 'delivered') {
+      return STATUS_TRANSITIONS_MAP[currentStatus].filter(status => STATUS_TRANSITIONS.customer.includes(status));
+    }
+    return [];
+  }
+  return [];
+};
+
 const OrderManagementDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [deliveryAssociates, setDeliveryAssociates] = useState([]);
@@ -22,6 +65,7 @@ const OrderManagementDashboard = () => {
     total: 0,
     pages: 0
   });
+  const [userRole, setUserRole] = useState(null);
 
   // Get token from localStorage
   const getToken = () => {
@@ -114,6 +158,18 @@ const OrderManagementDashboard = () => {
     fetchOrders();
     fetchDeliveryAssociates();
   }, [pagination.page, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (e) {
+        setUserRole(null);
+      }
+    }
+  }, []);
 
   // Handle order status update
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
@@ -358,8 +414,9 @@ const OrderManagementDashboard = () => {
                             setSelectedOrder(order);
                             setShowAssignDialog(true);
                           }}
-                          className="text-purple-600 hover:text-purple-900 transition-colors"
-                          title="Assign Delivery"
+                          className={`text-purple-600 hover:text-purple-900 transition-colors ${order.status !== 'processing' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={order.status !== 'processing' ? 'Can only assign delivery associate when order is in processing status' : 'Assign Delivery'}
+                          disabled={order.status !== 'processing'}
                         >
                           <Truck className="w-4 h-4" />
                         </button>
@@ -518,63 +575,77 @@ const OrderManagementDashboard = () => {
   );
 
   // Order Status Update Form Component
-  const OrderStatusUpdateForm = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-gray-900">Update Order Status</h3>
-            <button
-              onClick={() => setShowStatusForm(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">Order ID: <span className="font-medium">{selectedOrder?.orderId}</span></p>
-            <p className="text-sm text-gray-600">Customer: <span className="font-medium">{selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</span></p>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Current Status:</label>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(selectedOrder?.status)}`}>
-                {getStatusIcon(selectedOrder?.status)}
-                {selectedOrder?.status?.replace('_', ' ')}
-              </span>
+  const OrderStatusUpdateForm = () => {
+    const allowedStatuses = getAllowedStatusUpdates(selectedOrder?.status, userRole);
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-md w-full">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">Update Order Status</h3>
+              <button
+                onClick={() => setShowStatusForm(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Update to:</label>
-              <div className="space-y-2">
-                {['pending', 'processing', 'out_for_delivery', 'delivered', 'cancelled', 'returned'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => handleUpdateOrderStatus(selectedOrder?._id, status)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                      selectedOrder?.status === status 
-                        ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
-                    }`}
-                    disabled={selectedOrder?.status === status}
-                  >
-                    <span className={`inline-flex items-center gap-2 ${getStatusColor(status)}`}>
-                      {getStatusIcon(status)}
-                      {status.replace('_', ' ')}
-                    </span>
-                  </button>
-                ))}
+          </div>
+          <div className="p-6">
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Order ID: <span className="font-medium">{selectedOrder?.orderId}</span></p>
+              <p className="text-sm text-gray-600">Customer: <span className="font-medium">{selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</span></p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Status:</label>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(selectedOrder?.status)}`}>
+                  {getStatusIcon(selectedOrder?.status)}
+                  {selectedOrder?.status?.replace('_', ' ')}
+                </span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Update to:</label>
+                <div className="space-y-2">
+                  {allowedStatuses.length === 0 && (
+                    <div className="text-gray-500 text-sm">No status updates allowed for your role at this stage.</div>
+                  )}
+                  {allowedStatuses.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => handleUpdateOrderStatus(selectedOrder?._id, status)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                        selectedOrder?.status === status 
+                          ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                      disabled={selectedOrder?.status === status}
+                      title={`Allowed for role: ${userRole}`}
+                    >
+                      <span className={`inline-flex items-center gap-2 ${getStatusColor(status)}`}>
+                        {getStatusIcon(status)}
+                        {status.replace('_', ' ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Role legend */}
+              <div className="mt-4 text-xs text-gray-500">
+                <div className="font-semibold mb-1">Status Update Permissions:</div>
+                <ul className="list-disc ml-5">
+                  <li><b>Admin:</b> Can update to any status</li>
+                  <li><b>Supplier:</b> Can set Processing, Out for Delivery, Cancelled (before handover)</li>
+                  <li><b>Delivery Associate:</b> Can set Picked Up, On the Way, Delivered, Failed (for delivery)</li>
+                  <li><b>Customer:</b> Can request Cancelled (if pending/processing), Returned (if delivered)</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Assign Delivery Associate Dialog Component
   const AssignDeliveryAssociateDialog = () => (
