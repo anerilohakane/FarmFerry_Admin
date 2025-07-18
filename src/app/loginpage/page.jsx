@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Truck, Wheat, MapPin, Users, Leaf, Sun, CloudRain } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import FarmFerryLogo from "@/../public/images/Farm-Ferry-logo.jpeg";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -73,126 +74,189 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/20"></div>
-      
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-4 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div className="absolute -bottom-8 -right-4 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse delay-500"></div>
-      </div>
-      
-      <div className="relative w-full max-w-md">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-4 animate-pulse">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-gray-300">Sign in to your admin account</p>
-          </div>
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex">
+      {/* Left Side - Enhanced Project Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0">
+          {/* Floating circles */}
+          <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full animate-pulse"></div>
+          <div className="absolute top-32 right-20 w-16 h-16 bg-white/15 rounded-full animate-pulse delay-1000"></div>
+          <div className="absolute bottom-20 left-20 w-24 h-24 bg-white/10 rounded-full animate-pulse delay-500"></div>
+          <div className="absolute bottom-40 right-10 w-12 h-12 bg-white/15 rounded-full animate-pulse delay-700"></div>
           
-          {loginError && (
-            <div className="text-red-400 text-center mb-4 animate-pulse">{loginError}</div>
-          )}
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-white text-sm font-medium">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-white/10 border ${errors.email ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 hover:bg-white/20`}
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-400 text-sm animate-pulse">{errors.email}</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-white text-sm font-medium">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-white/10 border ${errors.password ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 hover:bg-white/20`}
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-red-400 text-sm animate-pulse">{errors.password}</p>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <label className="flex items-center text-sm text-gray-300 hover:text-white transition-colors cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="mr-2 rounded border-white/20 bg-white/10 text-purple-500 focus:ring-purple-500 focus:ring-offset-0" 
-                />
-                Remember me
-              </label>
-              <button className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
-                Forgot password?
-              </button>
-            </div>
-            
-            <button
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Signing in...
-                </div>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </div>
+          {/* Animated shapes */}
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-yellow-400/30 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-orange-400/30 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 right-1/3 w-28 h-28 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-500"></div>
           
-          <div className="mt-8 text-center">
-            <p className="text-gray-400 text-sm">
-              Don't have an account? 
-              <button className="text-purple-400 hover:text-purple-300 ml-1 transition-colors">
-                Sign up
-              </button>
+          {/* Floating icons */}
+          <div className="absolute top-1/3 right-1/4 animate-bounce delay-300">
+            <Leaf className="w-8 h-8 text-white/20" />
+          </div>
+          <div className="absolute bottom-1/3 left-1/3 animate-bounce delay-700">
+            <Sun className="w-6 h-6 text-yellow-300/30" />
+          </div>
+          <div className="absolute top-2/3 left-1/5 animate-bounce delay-1000">
+            <CloudRain className="w-7 h-7 text-blue-300/30" />
+          </div>
+        </div>
+        
+        <div className="ml-40 relative z-10 flex flex-col justify-center items-center text-center px-12 py-8 text-white h-full">
+          {/* Enhanced Logo */}
+          <div className="mb-8">
+            <div className="relative inline-flex items-center justify-center w-28 h-28 bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-lg rounded-full mb-6 shadow-2xl">
+              <img src={FarmFerryLogo.src} alt="Farm Ferry Logo" className="w-24 h-24 rounded-full z-10" />
+            </div>
+            <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-white via-green-100 to-yellow-200 bg-clip-text text-transparent">
+              Farm Ferry
+            </h1>
+            <p className="text-xl text-green-100 font-medium">
+              Purely Fresh Perfectly Delivered
             </p>
           </div>
           
-          {/* <div className="mt-6 flex items-center justify-center space-x-4">
-            <div className="h-px bg-white/20 flex-1"></div>
-            <span className="text-gray-400 text-sm">or</span>
-            <div className="h-px bg-white/20 flex-1"></div>
-          </div> */}
+          {/* Enhanced Features */}
+          <div className="space-y-6 max-w-sm">
+            <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 transform hover:scale-105 transition-all duration-300 hover:bg-white/15 border border-white/20">
+              <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center shadow-lg">
+                <Wheat className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-semibold">Fresh Produce</h3>
+                <p className="text-green-100 text-sm">Direct from local farms</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 transform hover:scale-105 transition-all duration-300 hover:bg-white/15 border border-white/20">
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-red-400 rounded-full flex items-center justify-center shadow-lg">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-semibold">Fast Delivery</h3>
+                <p className="text-green-100 text-sm">Same-day local delivery</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 transform hover:scale-105 transition-all duration-300 hover:bg-white/15 border border-white/20">
+              <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex items-center justify-center shadow-lg">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-semibold">Community</h3>
+                <p className="text-green-100 text-sm">Supporting local farmers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right Side - Enhanced Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-6">
+            <div className="relative inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mb-3 shadow-xl">
+              <img src={FarmFerryLogo.src} alt="Farm Ferry Logo" className="w-14 h-14 object-contain rounded-full z-10" />
+            </div>
+            <h1 className="text-2xl font-bold text-green-800 mb-1">Farm Ferry</h1>
+            <p className="text-gray-600 text-sm">Connecting Farms to Markets</p>
+          </div>
           
-          {/* <div className="mt-6 space-y-3">
-            <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-lg font-medium hover:bg-white/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
-              Continue with Google
-            </button>
-            <button className="w-full bg-white/10 border border-white/20 text-white py-3 px-4 rounded-lg font-medium hover:bg-white/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
-              Continue with GitHub
-            </button>
-          </div> */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-green-100/50">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+              <p className="text-gray-600 text-sm">Sign in to your admin account</p>
+            </div>
+            
+            {loginError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-center text-sm">
+                {loginError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-gray-700 text-sm font-medium">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white/70'} rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-300 backdrop-blur-sm`}
+                    placeholder="Enter your email"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-red-500 text-sm">{errors.email}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-gray-700 text-sm font-medium">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-12 py-3 border ${errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white/70'} rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-300 backdrop-blur-sm`}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm">{errors.password}</p>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="mr-2 rounded border-gray-300 text-green-600 focus:ring-green-500" 
+                  />
+                  Remember me
+                </label>
+                <button type="button" className="text-sm text-green-600 hover:text-green-700 transition-colors">
+                  Forgot password?
+                </button>
+              </div>
+              
+              <button
+                onClick={handleLogin}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+            </div>
+            
+            <div className="mt-6 text-center">
+              <p className="text-gray-500 text-sm">
+                Don't have an account? 
+                <button type="button" className="text-green-600 hover:text-green-700 ml-1 transition-colors font-medium">
+                  Sign up
+                </button>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
