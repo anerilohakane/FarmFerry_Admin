@@ -73,8 +73,8 @@ const DeliveryAssociateManagement = () => {
   }, []);
 
   // Unique lists for filters
-  const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || ''))).filter(Boolean)];
-  const specializations = ['All', ...Array.from(new Set(associates.map(a => a.specialization || ''))).filter(Boolean)];
+  const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || '')))].filter(Boolean);
+  const specializations = ['All', ...Array.from(new Set(associates.map(a => a.specialization || '')))].filter(Boolean);
 
   // Filter associates based on search and filters
   const filteredAssociates = associates.filter(associate => {
@@ -234,25 +234,27 @@ const DeliveryAssociateManagement = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 relative">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8 relative">
       {/* Toast notification */}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
 
       {/* Farm Ferry Banner */}
-      <div className="mb-6 flex items-center space-x-4 bg-green-50 border border-green-200 rounded-lg p-4">
-        <FiTruck className="text-green-600 text-3xl" />
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+        <FiTruck className="text-green-600 text-2xl sm:text-3xl" />
         <div>
-          <h1 className="text-3xl font-bold text-green-800 mb-1">Delivery Associate Management</h1>
-          <p className="text-green-900 text-sm">Manage your farm delivery associates, assign orders, and track performance across regions and specializations. Farm Ferry ensures fresh produce and products reach customers efficiently!</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-800 mb-1">Delivery Associate Management</h1>
+          <p className="text-xs sm:text-sm text-green-900">Manage your farm delivery associates, assign orders, and track performance across regions and specializations. Farm Ferry ensures fresh produce and products reach customers efficiently!</p>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="flex flex-col gap-3">
           {/* Search Bar */}
-          <div className="w-full md:w-1/3 relative mb-2 md:mb-0">
-            <label htmlFor="search-associates" className="block text-xs font-semibold text-green-700 mb-1 flex items-center"><FiSearch className="mr-1" />Search</label>
+          <div className="w-full relative">
+            <label htmlFor="search-associates" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
+              <FiSearch className="mr-1" />Search
+            </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiSearch className="text-gray-400" />
@@ -270,9 +272,11 @@ const DeliveryAssociateManagement = () => {
           </div>
 
           {/* Filters */}
-          <div className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label htmlFor="status-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center"><FiInfo className="mr-1" />Status</label>
+              <label htmlFor="status-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
+                <FiInfo className="mr-1" />Status
+              </label>
               <select
                 id="status-filter"
                 className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
@@ -287,7 +291,9 @@ const DeliveryAssociateManagement = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="region-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center"><FiMapPin className="mr-1" />Region</label>
+              <label htmlFor="region-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
+                <FiMapPin className="mr-1" />Region
+              </label>
               <select
                 id="region-filter"
                 className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
@@ -301,7 +307,9 @@ const DeliveryAssociateManagement = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="spec-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center"><FiAward className="mr-1" />Specialization</label>
+              <label htmlFor="spec-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
+                <FiAward className="mr-1" />Specialization
+              </label>
               <select
                 id="spec-filter"
                 className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
@@ -314,172 +322,173 @@ const DeliveryAssociateManagement = () => {
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* Reset Button */}
-          <div className="w-full md:w-auto flex justify-end mt-2 md:mt-0">
-            <button
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('All');
-                setRegionFilter('All');
-                setSpecializationFilter('All');
-              }}
-              aria-label="Reset filters"
-              type="button"
-            >
-              <FiRefreshCw className="mr-2" />
-              Reset
-            </button>
+            
+            {/* Reset Button */}
+            <div className="flex items-end">
+              <button
+                className="w-full sm:w-auto inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('All');
+                  setRegionFilter('All');
+                  setSpecializationFilter('All');
+                }}
+                aria-label="Reset filters"
+                type="button"
+              >
+                <FiRefreshCw className="mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Delivery Associate List Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-green-800 flex items-center"><FiInfo className="mr-2 text-green-500" />Delivery Associates</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-green-800 flex items-center mb-2 sm:mb-0">
+            <FiInfo className="mr-2 text-green-500" />Delivery Associates
+          </h2>
           <button
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="w-full sm:w-auto inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             onClick={handleAddAssociate}
             aria-label="Add new associate"
             title="Add new associate"
           >
-            <FiUserPlus className="mr-2" />
-            Add New Associate
+            <FiUserPlus className="mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Add New Associate</span>
+            <span className="sm:hidden">Add New</span>
           </button>
         </div>
-        {loading && <div>Loading...</div>}
-        {error && <div className="text-red-500">Error: {error}</div>}
+        
+        {loading && (
+          <div className="p-4 text-center text-gray-500">Loading...</div>
+        )}
+        
+        {error && (
+          <div className="p-4 text-center text-red-500">Error: {error}</div>
+        )}
+        
         {!loading && !error && (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-green-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Contact</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Region</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Specialization</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Workload</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Rating</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Approved</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Last Active</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-green-700 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Name</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Contact</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Workload</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">Approved</th>
+                  <th scope="col" className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-green-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAssociates.map((associate) => (
-                  <tr key={associate._id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {associate.profilePic ? (
-                          <img src={associate.profilePic} alt={associate.name} className="h-10 w-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium">
-                            {associate.name?.charAt(0)}
+                {filteredAssociates.length > 0 ? (
+                  filteredAssociates.map((associate) => (
+                    <tr key={associate._id} className="hover:bg-green-50">
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {associate.profilePic ? (
+                            <img 
+                              src={associate.profilePic} 
+                              alt={associate.name} 
+                              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover" 
+                            />
+                          ) : (
+                            <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium">
+                              {associate.name?.charAt(0)}
+                            </div>
+                          )}
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{associate.name}</div>
+                            <div className="text-xs text-gray-500 flex items-center">
+                              {associate.vehicle?.type} ({associate.vehicle?.registration})
+                            </div>
                           </div>
-                        )}
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{associate.name}</div>
-                          <div className="text-xs text-gray-500 flex items-center">{associate.vehicle?.type} ({associate.vehicle?.registration})</div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{associate.email}</div>
-                      <div className="text-sm text-gray-500">{associate.phone}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900 flex items-center">{associate.address?.region}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{associate.specialization || '-'}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        associate.isActive ? 'bg-green-100 text-green-800' :
-                        associate.status === 'Suspended' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`} title={associate.isActive ? 'Active' : associate.status || 'Inactive'}>
-                        {associate.isActive ? 'Active' : associate.status || 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{associate.activeAssignments || 0} active</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900 mr-2">{associate.averageRating || 0}</div>
-                        <div className="w-20 bg-gray-200 rounded-full h-2.5">
-                          <div 
-                            className="bg-yellow-400 h-2.5 rounded-full" 
-                            style={{ width: `${((associate.averageRating || 0) / 5) * 100}%` }}
-                          ></div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{associate.email}</div>
+                        <div className="text-xs sm:text-sm text-gray-500">{associate.phone}</div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <span 
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            associate.isActive ? 'bg-green-100 text-green-800' :
+                            associate.status === 'Suspended' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`} 
+                          title={associate.isActive ? 'Active' : associate.status || 'Inactive'}
+                        >
+                          {associate.isActive ? 'Active' : associate.status || 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{associate.activeAssignments || 0} active</span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <span 
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            associate.isVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`} 
+                          title={associate.isVerified ? 'Approved' : 'Pending'}
+                        >
+                          {associate.isVerified ? 'Approved' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-1 sm:space-x-2">
+                          <button
+                            onClick={() => openDetailsModal(associate)}
+                            className="text-green-600 hover:text-green-900"
+                            title="View Details"
+                            aria-label="View details"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openEditForm(associate)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit"
+                            aria-label="Edit associate"
+                          >
+                            <FiEdit className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </button>
+                          <button
+                            onClick={() => toggleApproval(associate)}
+                            className={associate.isVerified ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
+                            title={associate.isVerified ? "Revoke Approval" : "Approve"}
+                            aria-label={associate.isVerified ? "Revoke approval" : "Approve associate"}
+                          >
+                            {associate.isVerified ? <FiX className="h-4 w-4 sm:h-5 sm:w-5" /> : <FiCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
+                          </button>
+                          <button
+                            onClick={() => openAssignOrderDialog(associate)}
+                            className="text-purple-600 hover:text-purple-900"
+                            title="Assign Order"
+                            aria-label="Assign order"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                            </svg>
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        associate.isVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`} title={associate.isVerified ? 'Approved' : 'Pending'}>
-                        {associate.isVerified ? 'Approved' : 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-xs text-gray-500">{formatLastActive(associate.lastLogin || associate.updatedAt)}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => openDetailsModal(associate)}
-                          className="text-green-600 hover:text-green-900"
-                          title="View Details"
-                          aria-label="View details"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => openEditForm(associate)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Edit"
-                          aria-label="Edit associate"
-                        >
-                          <FiEdit className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => toggleApproval(associate)}
-                          className={associate.isVerified ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
-                          title={associate.isVerified ? "Revoke Approval" : "Approve"}
-                          aria-label={associate.isVerified ? "Revoke approval" : "Approve associate"}
-                        >
-                          {associate.isVerified ? <FiX className="h-5 w-5" /> : <FiCheck className="h-5 w-5" />}
-                        </button>
-                        <button
-                          onClick={() => openAssignOrderDialog(associate)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Assign Order"
-                          aria-label="Assign order"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-4 sm:px-6 py-4 text-center text-sm text-gray-500">
+                      No delivery associates found matching your criteria.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
-          </div>
-        )}
-        {filteredAssociates.length === 0 && !loading && !error && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No delivery associates found matching your criteria.</p>
           </div>
         )}
       </div>
@@ -496,13 +505,13 @@ const DeliveryAssociateManagement = () => {
                     <span className="text-green-600 text-xl font-medium">{selectedAssociate?.name?.charAt(0)}</span>
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                       <div>
                         <h3 className="text-lg leading-6 font-medium text-gray-900">{selectedAssociate?.name}</h3>
                         <p className="text-sm text-gray-500">{selectedAssociate?.vehicle?.type} ({selectedAssociate?.vehicle?.registration}) • {selectedAssociate?.status}</p>
                         <p className="text-xs text-gray-500">Region: {selectedAssociate?.address?.region} | Specialization: {selectedAssociate?.specialization}</p>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="mt-2 sm:mt-0 flex space-x-2">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           selectedAssociate?.isVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
@@ -635,7 +644,7 @@ const DeliveryAssociateManagement = () => {
                             required
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
                             <select
@@ -668,7 +677,7 @@ const DeliveryAssociateManagement = () => {
                             </select>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label htmlFor="vehicleReg" className="block text-sm font-medium text-gray-700">Vehicle Registration</label>
                             <input
@@ -836,7 +845,7 @@ const DeliveryAssociateManagement = () => {
                             required
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label htmlFor="estimatedTime" className="block text-sm font-medium text-gray-700">Estimated Delivery Time</label>
                             <input

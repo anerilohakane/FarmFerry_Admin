@@ -1043,7 +1043,7 @@ const Dashboard = () => {
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-all duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
           <h3 className="text-lg font-semibold text-gray-900">Analytics Overview</h3>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto ">
             {[
               { key: 'sales', label: 'Sales', icon: BarChart2 },
               { key: 'users', label: 'Users', icon: Users },
@@ -1066,7 +1066,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="h-64 sm:h-80 mb-7">
+        <div className="h-64 sm:h-80 ">
           {renderChart()}
         </div>
       </div>
