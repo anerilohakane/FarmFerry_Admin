@@ -53,7 +53,8 @@ const DeliveryAssociateManagement = () => {
         return;
       }
       try {
-        const res = await fetch('http://localhost:9000/api/v1/delivery-associates', {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -144,7 +145,8 @@ const DeliveryAssociateManagement = () => {
   const confirmApproval = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:9000/api/v1/delivery-associates/${selectedAssociate._id}/approve`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${selectedAssociate._id}/approve`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

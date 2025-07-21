@@ -138,7 +138,7 @@ const ProductManagementDashboard = () => {
 
   const ProductListTable = () => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+      <div className="p-6 bg-gradient-to-r from-green-50 to-green-50 border-b border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
@@ -146,7 +146,7 @@ const ProductManagementDashboard = () => {
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={20} />
             Add Product
@@ -212,7 +212,7 @@ const ProductManagementDashboard = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${product.price}
+                  ₹{product.price}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {product.stock}
@@ -301,7 +301,7 @@ const ProductManagementDashboard = () => {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Price</label>
-                  <p className="mt-1 text-sm text-gray-900">${product.price}</p>
+                  <p className="mt-1 text-sm text-gray-900">₹{product.price}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Stock</label>

@@ -200,7 +200,7 @@ const ReportsDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm">Total Sales</p>
-                <p className="text-2xl font-bold text-gray-800">${dashboard?.revenue?.total?.toLocaleString() || 0}</p>
+                <p className="text-2xl font-bold text-gray-800">₹{dashboard?.revenue?.total?.toLocaleString() || 0}</p>
                 {/* You can add growth info if available */}
               </div>
               <div className="bg-green-100 p-3 rounded-full">

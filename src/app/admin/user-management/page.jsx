@@ -212,11 +212,11 @@ const UserManagementDashboard = () => {
               
               <div className="flex items-center space-x-3">
                 <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">$</span>
+                  <span className="text-white text-xs">₹</span>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total Spent</p>
-                  <p className="font-medium">${selectedCustomer?.totalSpent}</p>
+                  <p className="font-medium">₹{selectedCustomer?.totalSpent}</p>
                 </div>
               </div>
             </div>
@@ -405,7 +405,7 @@ const UserManagementDashboard = () => {
                       {customer.orders}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${customer.totalSpent}
+                      {customer.totalSpent}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">

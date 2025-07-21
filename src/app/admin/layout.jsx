@@ -50,13 +50,13 @@ const AdminLayout = ({ children }) => {
       description: 'Overview & Analytics',
       route: '/admin'
     },
-    { 
-      icon: Users, 
-      label: 'User Management',
-      active: activeItem === 'User Management',
-      description: 'Customers & Admins',
-      route: '/admin/user-management'
-    },
+    // { 
+    //   icon: Users, 
+    //   label: 'User Management',
+    //   active: activeItem === 'User Management',
+    //   description: 'Customers & Admins',
+    //   route: '/admin/user-management'
+    // },
     { 
       icon: Truck, 
       label: 'Supplier Management',
