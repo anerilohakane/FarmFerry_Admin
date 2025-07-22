@@ -807,7 +807,7 @@ const AdminLayout = ({ children }) => {
             )}
             {!sidebarCollapsed && (
               <span className="text-lg sm:text-xl font-bold text-gray-800">
-                Farm Ferry Admin
+                FarmFerry Admin
               </span>
             )}
           </div>

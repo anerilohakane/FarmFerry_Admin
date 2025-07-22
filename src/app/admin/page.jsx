@@ -665,6 +665,7 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [chartTransition, setChartTransition] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
   const [error, setError] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -682,17 +683,20 @@ const Dashboard = () => {
     setError(null);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      // Dashboard stats
-      const statsRes = await apiRequest('/api/v1/admin/dashboard-stats', { token });
-      // Orders (recent)
-      const ordersRes = await apiRequest('/api/v1/orders?limit=10&sort=createdAt&order=desc', { token });
-      // Revenue analytics (for chart)
-      const revenueRes = await apiRequest(`/api/v1/admin/analytics/revenue?range=${timeRange}`, { token });
-      // Product analytics (for pie chart and top products)
-      const productRes = await apiRequest(`/api/v1/admin/analytics/products?range=${timeRange}`, { token });
-      // Customer analytics (for users chart)
-      const customerRes = await apiRequest(`/api/v1/admin/analytics/customers?range=${timeRange}`, { token });
-
+      // Fetch all data in parallel
+      const [
+        statsRes,
+        ordersRes,
+        revenueRes,
+        productRes,
+        customerRes
+      ] = await Promise.all([
+        apiRequest('/api/v1/admin/dashboard-stats', { token }),
+        apiRequest('/api/v1/orders?limit=10&sort=createdAt&order=desc', { token }),
+        apiRequest(`/api/v1/admin/analytics/revenue?range=${timeRange}`, { token }),
+        apiRequest(`/api/v1/admin/analytics/products?range=${timeRange}`, { token }),
+        apiRequest(`/api/v1/admin/analytics/customers?range=${timeRange}`, { token }),
+      ]);
       // Stats cards mapping
       setStats([
         {
@@ -757,9 +761,11 @@ const Dashboard = () => {
       // Top products
       setTopProducts(productRes.data.topProducts || []);
       setLoading(false);
+      setFirstLoad(false);
     } catch (err) {
       setError(err.message || 'Failed to load dashboard data');
       setLoading(false);
+      setFirstLoad(false);
     }
   };
 
@@ -925,7 +931,7 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <div className="p-10 text-center text-lg text-gray-500">Loading dashboard...</div>;
+  if (firstLoad && loading) return <div className="p-10 text-center text-lg text-gray-500">Loading dashboard...</div>;
   if (error) return <div className="p-10 text-center text-lg text-red-500">{error}</div>;
 
   return (

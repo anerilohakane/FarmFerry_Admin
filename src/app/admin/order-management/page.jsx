@@ -731,7 +731,7 @@ const OrderManagementDashboard = () => {
   // Assign Delivery Associate Dialog Component
   const AssignDeliveryAssociateDialog = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-md">
+      <div className="bg-white rounded-lg w-full max-w-4xl">
         <div className="p-4 md:p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h3 className="text-lg md:text-xl font-bold text-gray-900">Assign Delivery Associate</h3>
@@ -743,49 +743,91 @@ const OrderManagementDashboard = () => {
             </button>
           </div>
         </div>
-        
         <div className="p-4 md:p-6">
-          <div className="mb-3 md:mb-4">
-            <p className="text-xs md:text-sm text-gray-600 mb-1">Order ID: <span className="font-medium">{selectedOrder?.orderId?.slice(-6)}</span></p>
-            <p className="text-xs md:text-sm text-gray-600">Delivery Date: <span className="font-medium">{formatDate(selectedOrder?.estimatedDeliveryDate)}</span></p>
-          </div>
-          
-          <div className="space-y-2 md:space-y-3">
-            <h4 className="font-medium text-gray-900 text-sm md:text-base">Available Associates:</h4>
-            {deliveryAssociates.length === 0 ? (
-              <p className="text-gray-500 text-xs md:text-sm">No delivery associates available</p>
-            ) : (
-              deliveryAssociates.map((associate) => (
-                <div
-                  key={associate._id}
-                  className={`p-2 md:p-3 rounded-lg border transition-colors text-xs md:text-sm ${
-                    associate.isOnline 
-                      ? 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer' 
-                      : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-60'
-                  }`}
-                  onClick={() => associate.isOnline && handleAssignDeliveryAssociate(selectedOrder?._id, associate)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{associate.name}</p>
-                      <p className="text-gray-500">{associate.phone}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        associate.isOnline 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {associate.isOnline ? 'Online' : 'Offline'}
-                      </span>
-                      {selectedOrder?.deliveryAssociate?.associate?._id === associate._id && (
-                        <span className="text-blue-600 text-xs md:text-sm font-medium">Current</span>
-                      )}
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left: Order Details */}
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg h-full">
+              <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                <Package className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                Order Details
+              </h4>
+              <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
+                <p><span className="font-medium">Order ID:</span> {selectedOrder?.orderId?.slice(-6)}</p>
+                <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder?.createdAt)}</p>
+                <p><span className="font-medium">Delivery Date:</span> {formatDate(selectedOrder?.estimatedDeliveryDate)}</p>
+                <p><span className="font-medium">Customer:</span> {selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</p>
+                <p><span className="font-medium">Phone:</span> {selectedOrder?.customer?.phone || 'N/A'}</p>
+                <p><span className="font-medium">Address:</span> {selectedOrder?.deliveryAddress?.street}, {selectedOrder?.deliveryAddress?.city}, {selectedOrder?.deliveryAddress?.state} {selectedOrder?.deliveryAddress?.postalCode}</p>
+                <p><span className="font-medium">Status:</span> <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(selectedOrder?.status)}`}>{getStatusIcon(selectedOrder?.status)}{selectedOrder?.status?.replace('_', ' ')}</span></p>
+                <p><span className="font-medium">Amount:</span> {formatCurrency(selectedOrder?.totalAmount)}</p>
+                <div className="mt-2">
+                  <span className="font-medium">Items:</span>
+                  <ul className="space-y-2 mt-2">
+                    {selectedOrder?.items?.map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-3 p-2 bg-white rounded border border-gray-100">
+                        {item.product?.image ? (
+                          <img
+                            src={item.product.image}
+                            alt={item.product?.name}
+                            className="w-12 h-12 object-cover rounded border"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded border text-gray-400 text-xs">No Image</div>
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 text-xs md:text-sm">{item.product?.name}</div>
+                          <div className="text-gray-500 text-xs">Qty: {item.quantity}</div>
+                          <div className="text-gray-500 text-xs">Price: {formatCurrency(item.product?.price || 0)}</div>
+                        </div>
+                        <div className="font-bold text-green-700 text-xs md:text-sm">{formatCurrency(item.totalPrice)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-300 text-sm md:text-base mt-2">
+                    <p className="font-bold">Total Amount:</p>
+                    <p className="font-bold">{formatCurrency(selectedOrder?.totalAmount)}</p>
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            </div>
+            {/* Right: Available Associates */}
+            <div>
+              <h4 className="font-medium text-gray-900 text-sm md:text-base mb-2 md:mb-3">Available Associates:</h4>
+              {deliveryAssociates.length === 0 ? (
+                <p className="text-gray-500 text-xs md:text-sm">No delivery associates available</p>
+              ) : (
+                deliveryAssociates.map((associate) => (
+                  <div
+                    key={associate._id}
+                    className={`p-2 md:p-3 rounded-lg border transition-colors text-xs md:text-sm ${
+                      associate.isOnline 
+                        ? 'bg-white border-gray-200 hover:bg-gray-50 cursor-pointer' 
+                        : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-60'
+                    }`}
+                    onClick={() => associate.isOnline && handleAssignDeliveryAssociate(selectedOrder?._id, associate)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{associate.name}</p>
+                        <p className="text-gray-500">{associate.phone}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          associate.isOnline 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {associate.isOnline ? 'Online' : 'Offline'}
+                        </span>
+                        {selectedOrder?.deliveryAssociate?.associate?._id === associate._id && (
+                          <span className="text-blue-600 text-xs md:text-sm font-medium">Current</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>

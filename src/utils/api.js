@@ -2,7 +2,7 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // Updated to match backend port
 
-export async function apiRequest(endpoint, { method = 'GET', body, headers = {}, token } = {}) {
+export async function apiRequest(endpoint, { method = 'GET', body, headers = {}, token, isFormData } = {}) {
   // Do not send token for login or register endpoints
   const isAuthEndpoint = endpoint.startsWith('/api/auth/login') || endpoint.startsWith('/api/auth/register');
   if (!isAuthEndpoint && !token && typeof window !== 'undefined') {
@@ -12,7 +12,6 @@ export async function apiRequest(endpoint, { method = 'GET', body, headers = {},
   const config = {
     method,
     headers: {
-      'Content-Type': 'application/json',
       ...headers,
     },
   };
@@ -22,7 +21,13 @@ export async function apiRequest(endpoint, { method = 'GET', body, headers = {},
   }
   
   if (body) {
-    config.body = JSON.stringify(body);
+    if (isFormData) {
+      config.body = body;
+      // Do not set Content-Type, browser will set it
+    } else {
+      config.headers['Content-Type'] = 'application/json';
+      config.body = JSON.stringify(body);
+    }
   }
   
   console.log('🌐 API Request:', {
@@ -41,7 +46,17 @@ export async function apiRequest(endpoint, { method = 'GET', body, headers = {},
   });
   
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
+    let error = {};
+    try {
+      error = await res.json();
+    } catch (e) {
+      try {
+        const text = await res.text();
+        error = { message: text || `HTTP ${res.status}: ${res.statusText}` };
+      } catch {
+        error = { message: `HTTP ${res.status}: ${res.statusText}` };
+      }
+    }
     console.error('❌ API Error:', error);
     throw new Error(error.message || `HTTP ${res.status}: ${res.statusText}`);
   }
@@ -59,32 +74,23 @@ export async function getProducts() {
 }
 
 export async function addProduct(product, token) {
-  // Map frontend fields to backend fields
-  const body = {
-    name: product.name,
-    sku: product.sku,
-    price: product.price,
-    stockQuantity: product.stock,
-    categoryId: product.categoryId, // You may need to map category name to ID
-    description: product.description,
-    status: product.status,
-  };
-  const res = await apiRequest('/api/v1/products', { method: 'POST', body, token });
-  return res.data.product;
+  // product is FormData
+  return apiRequest('/api/v1/products', {
+    method: 'POST',
+    body: product,
+    token,
+    isFormData: true
+  });
 }
 
 export async function updateProduct(id, product, token) {
-  const body = {
-    name: product.name,
-    sku: product.sku,
-    price: product.price,
-    stockQuantity: product.stock,
-    categoryId: product.categoryId,
-    description: product.description,
-    status: product.status,
-  };
-  const res = await apiRequest(`/api/v1/products/${id}`, { method: 'PUT', body, token });
-  return res.data.product;
+  // product is FormData
+  return apiRequest(`/api/v1/products/${id}`, {
+    method: 'PATCH',
+    body: product,
+    token,
+    isFormData: true
+  });
 }
 
 export async function deleteProduct(id, token) {
@@ -182,4 +188,28 @@ export async function getAdminCustomerAnalytics(params = {}, token) {
 export async function getAdminCategoryAnalytics(params = {}, token) {
   const queryString = new URLSearchParams(params).toString();
   return apiRequest(`/api/v1/admin/analytics/categories?${queryString}`, { method: 'GET', token });
+} 
+
+// Admin profile API utilities
+export async function getAdminProfile(token) {
+  const res = await apiRequest('/api/v1/admin/profile', { method: 'GET', token });
+  return res.data.admin;
+}
+
+export async function updateAdminProfile(profile, token) {
+  const res = await apiRequest('/api/v1/admin/profile', {
+    method: 'PUT',
+    body: profile,
+    token
+  });
+  return res.data.admin;
+}
+
+export async function changeAdminPassword(passwords, token) {
+  // passwords = { currentPassword, newPassword, confirmPassword }
+  await apiRequest('/api/v1/admin/change-password', {
+    method: 'PUT',
+    body: passwords,
+    token
+  });
 } 

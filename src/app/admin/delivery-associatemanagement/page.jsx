@@ -33,9 +33,6 @@ const DeliveryAssociateManagement = () => {
     phone: '',
     status: 'Active',
     vehicleType: 'Motorcycle',
-    vehicleReg: '',
-    region: '',
-    specialization: '',
   });
   const [newOrderData, setNewOrderData] = useState({
     orderId: '',
@@ -43,6 +40,16 @@ const DeliveryAssociateManagement = () => {
     estimatedTime: '',
     notes: '',
   });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'Active',
+    vehicleType: 'Motorcycle',
+  });
+  // 1. Add delete functionality
+  const [availableOrders, setAvailableOrders] = useState([]);
 
   useEffect(() => {
     const fetchAssociates = async () => {
@@ -71,6 +78,34 @@ const DeliveryAssociateManagement = () => {
     };
     fetchAssociates();
   }, []);
+
+  // 4. Fetch available orders for assignment
+  const fetchAvailableOrders = async () => {
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/orders?status=unassigned`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error('Failed to fetch orders');
+      const data = await res.json();
+      setAvailableOrders(Array.isArray(data) ? data : data.data || []);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Fetch orders when assign dialog opens
+  useEffect(() => {
+    if (isAssignOrderDialogOpen) {
+      fetchAvailableOrders();
+    }
+    // eslint-disable-next-line
+  }, [isAssignOrderDialogOpen]);
 
   // Unique lists for filters
   const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || '')))].filter(Boolean);
@@ -107,9 +142,6 @@ const DeliveryAssociateManagement = () => {
       phone: associate.phone,
       status: associate.status,
       vehicleType: associate.vehicleType,
-      vehicleReg: associate.vehicleReg,
-      region: associate.region,
-      specialization: associate.specialization,
     });
     setSelectedAssociate(associate);
     setIsEditModalOpen(true);
@@ -124,15 +156,32 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // Submit edited associate data
-  const handleEditSubmit = (e) => {
+  // 3. Add dynamic edit associate
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const updatedAssociates = associates.map(associate =>
-      associate.id === selectedAssociate.id ? { ...associate, ...editFormData } : associate
-    );
-    setAssociates(updatedAssociates);
-    setIsEditModalOpen(false);
-    showToast('Associate details updated!');
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${selectedAssociate._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editFormData),
+      });
+      if (!res.ok) throw new Error('Failed to update associate');
+      const data = await res.json();
+      setAssociates(prev => prev.map(a => a._id === selectedAssociate._id ? data.data : a));
+      setIsEditModalOpen(false);
+      showToast('Associate details updated!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Toggle associate approval status
@@ -188,11 +237,31 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // Submit assigned order
-  const handleOrderSubmit = (e) => {
+  // 5. Assign order to associate
+  const handleOrderSubmit = async (e) => {
     e.preventDefault();
-    showToast(`Order ${newOrderData.orderId} assigned to ${selectedAssociate.name}`);
-    setIsAssignOrderDialogOpen(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/orders/${newOrderData.orderId}/assign`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ deliveryAssociateId: selectedAssociate._id }),
+      });
+      if (!res.ok) throw new Error('Failed to assign order');
+      showToast(`Order ${newOrderData.orderId} assigned to ${selectedAssociate.name}`);
+      setIsAssignOrderDialogOpen(false);
+      // Optionally, refetch associates/orders here
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Add new associate (mock)
@@ -220,6 +289,86 @@ const DeliveryAssociateManagement = () => {
       },
     ]);
     showToast('New associate added!');
+  };
+
+  // Open add associate form
+  const openAddForm = () => {
+    setAddFormData({
+      name: '',
+      email: '',
+      phone: '',
+      status: 'Active',
+      vehicleType: 'Motorcycle',
+    });
+    setIsAddModalOpen(true);
+  };
+
+  // Handle add form changes
+  const handleAddFormChange = (e) => {
+    const { name, value } = e.target;
+    setAddFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // 2. Add dynamic add associate
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: addFormData.name,
+          email: addFormData.email,
+          phone: addFormData.phone,
+          status: addFormData.status,
+          vehicleType: addFormData.vehicleType,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to add associate');
+      const data = await res.json();
+      setAssociates(prev => [data.data, ...prev]);
+      setIsAddModalOpen(false);
+      showToast('New associate added!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1. Add delete functionality
+  const handleDeleteAssociate = async (associateId) => {
+    if (!window.confirm('Are you sure you want to delete this associate?')) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${associateId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error('Failed to delete associate');
+      setAssociates(prev => prev.filter(a => a._id !== associateId));
+      showToast('Associate deleted!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper for last active
@@ -352,7 +501,7 @@ const DeliveryAssociateManagement = () => {
           </h2>
           <button
             className="w-full sm:w-auto inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            onClick={handleAddAssociate}
+            onClick={openAddForm}
             aria-label="Add new associate"
             title="Add new associate"
           >
@@ -467,14 +616,12 @@ const DeliveryAssociateManagement = () => {
                             {associate.isVerified ? <FiX className="h-4 w-4 sm:h-5 sm:w-5" /> : <FiCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
                           </button>
                           <button
-                            onClick={() => openAssignOrderDialog(associate)}
-                            className="text-purple-600 hover:text-purple-900"
-                            title="Assign Order"
-                            aria-label="Assign order"
+                            onClick={() => handleDeleteAssociate(associate._id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete"
+                            aria-label="Delete associate"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                            </svg>
+                            <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
                         </div>
                       </td>
@@ -509,7 +656,6 @@ const DeliveryAssociateManagement = () => {
                       <div>
                         <h3 className="text-lg leading-6 font-medium text-gray-900">{selectedAssociate?.name}</h3>
                         <p className="text-sm text-gray-500">{selectedAssociate?.vehicle?.type} ({selectedAssociate?.vehicle?.registration}) • {selectedAssociate?.status}</p>
-                        <p className="text-xs text-gray-500">Region: {selectedAssociate?.address?.region} | Specialization: {selectedAssociate?.specialization}</p>
                       </div>
                       <div className="mt-2 sm:mt-0 flex space-x-2">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -557,17 +703,6 @@ const DeliveryAssociateManagement = () => {
                 </div>
               </div>
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => {
-                    setIsDetailsModalOpen(false);
-                    openAssignOrderDialog(selectedAssociate);
-                  }}
-                  aria-label="Assign order"
-                >
-                  Assign Order
-                </button>
                 <button
                   type="button"
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
@@ -676,44 +811,6 @@ const DeliveryAssociateManagement = () => {
                               <option value="Scooter">Scooter</option>
                             </select>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label htmlFor="vehicleReg" className="block text-sm font-medium text-gray-700">Vehicle Registration</label>
-                            <input
-                              type="text"
-                              name="vehicleReg"
-                              id="vehicleReg"
-                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              value={editFormData.vehicleReg}
-                              onChange={handleEditFormChange}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="region" className="block text-sm font-medium text-gray-700">Region</label>
-                            <input
-                              type="text"
-                              name="region"
-                              id="region"
-                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              value={editFormData.region}
-                              onChange={handleEditFormChange}
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label htmlFor="specialization" className="block text-sm font-medium text-gray-700">Specialization</label>
-                          <input
-                            type="text"
-                            name="specialization"
-                            id="specialization"
-                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                            value={editFormData.specialization}
-                            onChange={handleEditFormChange}
-                            required
-                          />
                         </div>
                       </div>
                     </div>
@@ -826,11 +923,11 @@ const DeliveryAssociateManagement = () => {
                             required
                           >
                             <option value="">Select an order</option>
-                            {/* This part needs to be dynamic, fetching orders from backend */}
-                            {/* For now, using mockOrders as a placeholder */}
-                            {/* <option value="ORD-1001">ORD-1001 - Farm Lane 12, Green Valley</option> */}
-                            {/* <option value="ORD-1002">ORD-1002 - Sunrise Farms, Block B</option> */}
-                            {/* <option value="ORD-1003">ORD-1003 - Riverbank, Plot 7</option> */}
+                            {availableOrders.map(order => (
+                              <option key={order._id} value={order._id}>
+                                {order.orderNumber || order._id} - {order.deliveryAddress?.addressLine1 || ''}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
@@ -886,6 +983,115 @@ const DeliveryAssociateManagement = () => {
                     type="button"
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                     onClick={() => setIsAssignOrderDialogOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Add New Associate Modal */}
+      {isAddModalOpen && (
+        <>
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-50" aria-hidden="true"></div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div className="relative transform overflow-hidden rounded-lg bg-white shadow-xl w-full max-w-lg">
+              <form onSubmit={handleAddSubmit}>
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-16 sm:w-16">
+                      <span className="text-green-600 text-xl font-medium">+</span>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">Add New Associate</h3>
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <label htmlFor="add-name" className="block text-sm font-medium text-gray-700">Name</label>
+                          <input
+                            type="text"
+                            name="name"
+                            id="add-name"
+                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                            value={addFormData.name}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="add-email" className="block text-sm font-medium text-gray-700">Email</label>
+                          <input
+                            type="email"
+                            name="email"
+                            id="add-email"
+                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                            value={addFormData.email}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="add-phone" className="block text-sm font-medium text-gray-700">Phone</label>
+                          <input
+                            type="tel"
+                            name="phone"
+                            id="add-phone"
+                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                            value={addFormData.phone}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label htmlFor="add-status" className="block text-sm font-medium text-gray-700">Status</label>
+                            <select
+                              id="add-status"
+                              name="status"
+                              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                              value={addFormData.status}
+                              onChange={handleAddFormChange}
+                              required
+                            >
+                              <option value="Active">Active</option>
+                              <option value="Inactive">Inactive</option>
+                              <option value="Suspended">Suspended</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="add-vehicleType" className="block text-sm font-medium text-gray-700">Vehicle Type</label>
+                            <select
+                              id="add-vehicleType"
+                              name="vehicleType"
+                              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                              value={addFormData.vehicleType}
+                              onChange={handleAddFormChange}
+                              required
+                            >
+                              <option value="Motorcycle">Motorcycle</option>
+                              <option value="Car">Car</option>
+                              <option value="Bicycle">Bicycle</option>
+                              <option value="Scooter">Scooter</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Add Associate
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={() => setIsAddModalOpen(false)}
                   >
                     Cancel
                   </button>

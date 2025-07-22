@@ -109,7 +109,7 @@ const LoginPage = () => {
               <img src={FarmFerryLogo.src} alt="Farm Ferry Logo" className="w-24 h-24 rounded-full z-10" />
             </div>
             <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-white via-green-100 to-yellow-200 bg-clip-text text-transparent">
-              Farm Ferry
+              FarmFerry
             </h1>
             <p className="text-xl text-green-100 font-medium">
               Purely Fresh Perfectly Delivered

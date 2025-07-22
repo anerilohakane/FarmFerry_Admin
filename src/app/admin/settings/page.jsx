@@ -1,45 +1,74 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Lock, Save, Eye, EyeOff, Bell, Shield, Smartphone, Mail, MapPin, Phone, Calendar, Building2, CheckCircle, AlertCircle } from 'lucide-react';
+import { getAdminProfile, updateAdminProfile, changeAdminPassword, apiRequest } from '../../../utils/api';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [profileData, setProfileData] = useState({
-    fullName: 'John Smith',
-    email: 'john.smith@farmferry.com',
-    phone: '+1 (555) 123-4567',
-    location: 'California, USA',
-    company: 'Smith Family Farm',
-    joinDate: '2023-01-15',
-    avatar: ''
-  });
+  const [profileData, setProfileData] = useState(null);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  const [notifications, setNotifications] = useState({
-    orderUpdates: true,
-    priceAlerts: false,
-    newProducts: true,
-    marketing: false
-  });
+  const [notifications, setNotifications] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const fileInputRef = useRef();
 
-  const handleProfileSubmit = (e) => {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    getAdminProfile(token).then(admin => {
+      setProfileData({
+        fullName: `${admin.name.firstName} ${admin.name.lastName}`,
+        email: admin.email,
+        phone: admin.phone || '',
+        location: admin.location || '',
+        company: admin.company || '',
+        joinDate: admin.joinDate ? admin.joinDate.split('T')[0] : '',
+        avatar: admin.avatar || ''
+      });
+      setNotifications(admin.notificationPreferences || {
+        orderUpdates: true,
+        priceAlerts: false,
+        newProducts: true,
+        marketing: false
+      });
+      setLoading(false);
+    });
+  }, []);
+
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSaveStatus('saving');
-    setTimeout(() => {
+    const token = localStorage.getItem('token');
+    try {
+      const [firstName, ...lastNameArr] = profileData.fullName.split(' ');
+      const lastName = lastNameArr.join(' ');
+      await updateAdminProfile({
+        name: { firstName, lastName },
+        email: profileData.email,
+        phone: profileData.phone,
+        location: profileData.location,
+        company: profileData.company,
+        avatar: profileData.avatar,
+        notificationPreferences: notifications
+      }, token);
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(''), 3000);
-    }, 1500);
+    } catch (err) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setSaveStatus('error');
@@ -47,11 +76,43 @@ const SettingsPage = () => {
       return;
     }
     setSaveStatus('saving');
-    setTimeout(() => {
+    const token = localStorage.getItem('token');
+    try {
+      await changeAdminPassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
+      }, token);
       setSaveStatus('success');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSaveStatus(''), 3000);
-    }, 1500);
+    } catch (err) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    setAvatarError('');
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const res = await apiRequest('/api/v1/admin/avatar', {
+        method: 'PUT',
+        body: formData,
+        token,
+        isFormData: true
+      });
+      setProfileData((prev) => ({ ...prev, avatar: res.data.avatar }));
+    } catch (err) {
+      setAvatarError(err.message || 'Failed to upload avatar');
+    } finally {
+      setAvatarUploading(false);
+    }
   };
 
   const tabs = [
@@ -80,6 +141,10 @@ const SettingsPage = () => {
       </div>
     );
   };
+
+  if (loading || !profileData || !notifications) {
+    return <div className="min-h-screen flex items-center justify-center text-xl">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50 p-4">
@@ -129,17 +194,32 @@ const SettingsPage = () => {
                 <div className="space-y-6">
                   {/* Avatar Section */}
                   <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-white" />
+                    <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center overflow-hidden">
+                      {profileData.avatar ? (
+                        <img src={profileData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-12 h-12 text-white" />
+                      )}
                     </div>
                     <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleAvatarChange}
+                        disabled={avatarUploading}
+                      />
                       <button
                         type="button"
                         className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        disabled={avatarUploading}
                       >
-                        Change Avatar
+                        {avatarUploading ? 'Uploading...' : 'Change Avatar'}
                       </button>
                       <p className="text-sm text-gray-500 mt-1">JPG, PNG up to 5MB</p>
+                      {avatarError && <p className="text-sm text-red-500 mt-1">{avatarError}</p>}
                     </div>
                   </div>
 

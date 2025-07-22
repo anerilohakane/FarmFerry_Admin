@@ -55,8 +55,9 @@ const ProductManagementDashboard = () => {
   const categoryNames = ['All', ...categories.map(c => c.name)];
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = filterCategory === 'All' || product.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
@@ -68,9 +69,10 @@ const ProductManagementDashboard = () => {
     try {
       let categoryId = categories.find(c => c.name === newProduct.category)?.id;
       if (!categoryId) categoryId = '';
-      const productToAdd = { ...newProduct, categoryId };
+      const formDataToSend = newProduct.submitData;
+      formDataToSend.set('categoryId', categoryId);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const created = await addProduct(productToAdd, token);
+      const created = await addProduct(formDataToSend, token);
       setProducts(prev => [...prev, {
         id: created._id,
         name: created.name,
@@ -97,9 +99,15 @@ const ProductManagementDashboard = () => {
     try {
       let categoryId = categories.find(c => c.name === updatedProduct.category)?.id;
       if (!categoryId) categoryId = '';
-      const productToUpdate = { ...updatedProduct, categoryId };
+      const formDataToSend = updatedProduct.submitData;
+      formDataToSend.set('categoryId', categoryId);
+      // If no new images are uploaded, include existing images
+      if ((!updatedProduct.images || updatedProduct.images.length === 0) && editingProduct && editingProduct.imageUrl) {
+        // If editingProduct has an imageUrl, include it as existingImages
+        formDataToSend.append('existingImages', JSON.stringify({ url: editingProduct.imageUrl }));
+      }
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const updated = await updateProduct(updatedProduct.id, productToUpdate, token);
+      const updated = await updateProduct(updatedProduct.id, formDataToSend, token);
       setProducts(prev => prev.map(p => p.id === updatedProduct.id ? {
         id: updated._id,
         name: updated.name,
@@ -113,7 +121,11 @@ const ProductManagementDashboard = () => {
       } : p));
       setEditingProduct(null);
     } catch (err) {
-      setError(err.message);
+      if (err.message && err.message.toLowerCase().includes('not found')) {
+        alert('Product not found. It may have been deleted. Please refresh the page.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -130,7 +142,11 @@ const ProductManagementDashboard = () => {
       setShowDeleteDialog(false);
       setProductToDelete(null);
     } catch (err) {
-      setError(err.message);
+      if (err.message && err.message.toLowerCase().includes('not found')) {
+        alert('Product not found. It may have been deleted. Please refresh the page.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -196,7 +212,7 @@ const ProductManagementDashboard = () => {
               <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    {product.imageUrl ? (
+                    {product.imageUrl && !product.imageUrl.includes('via.placeholder.com') ? (
                       <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded" />
                     ) : (
                       <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400">N/A</div>
@@ -235,7 +251,15 @@ const ProductManagementDashboard = () => {
                       <Eye size={16} />
                     </button>
                     <button
-                      onClick={() => setEditingProduct(product)}
+                      onClick={() => {
+                        // Only allow editing if product exists in the products list
+                        const exists = products.find(p => p.id === product.id);
+                        if (!exists) {
+                          alert('This product no longer exists. Please refresh the page.');
+                          return;
+                        }
+                        setEditingProduct(product);
+                      }}
                       className="text-yellow-600 hover:text-yellow-800 transition-colors"
                     >
                       <Edit2 size={16} />
@@ -338,19 +362,34 @@ const ProductManagementDashboard = () => {
       stock: product?.stock || '',
       status: product?.status || 'Active',
       description: product?.description || '',
+      images: null,
     });
 
     const handleSubmit = () => {
-      if (!formData.name || !formData.category || !formData.price || !formData.stock || !formData.status) {
-        alert('Please fill in all required fields');
+      if (!formData.name || !formData.category || !formData.price || !formData.stock || !formData.status || !formData.images || formData.images.length === 0) {
+        alert('Please fill in all required fields, including at least one image');
         return;
       }
-      
+      // Find the categoryId from the selected category name
+      let categoryId = '';
+      if (categories && categories.length > 0) {
+        const found = categories.find(c => c.name === formData.category);
+        if (found) categoryId = found.id;
+      }
+      const submitData = new FormData();
+      submitData.append('name', formData.name);
+      submitData.append('categoryId', categoryId);
+      submitData.append('price', formData.price);
+      submitData.append('stockQuantity', formData.stock);
+      submitData.append('status', formData.status);
+      submitData.append('description', formData.description);
+      for (let i = 0; i < formData.images.length; i++) {
+        submitData.append('images', formData.images[i]);
+      }
       onSave({
         ...formData,
         id: product?.id,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock)
+        submitData
       });
     };
 
@@ -442,6 +481,18 @@ const ProductManagementDashboard = () => {
                   <option value="Active">Active</option>
                   <option value="Out of Stock">Out of Stock</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Image *
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setFormData({ ...formData, images: e.target.files })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
               </div>
             </div>
             
