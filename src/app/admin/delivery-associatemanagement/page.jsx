@@ -48,8 +48,6 @@ const DeliveryAssociateManagement = () => {
     status: 'Active',
     vehicleType: 'Motorcycle',
   });
-  // 1. Add delete functionality
-  const [availableOrders, setAvailableOrders] = useState([]);
 
   useEffect(() => {
     const fetchAssociates = async () => {
@@ -78,34 +76,6 @@ const DeliveryAssociateManagement = () => {
     };
     fetchAssociates();
   }, []);
-
-  // 4. Fetch available orders for assignment
-  const fetchAvailableOrders = async () => {
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/orders?status=unassigned`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!res.ok) throw new Error('Failed to fetch orders');
-      const data = await res.json();
-      setAvailableOrders(Array.isArray(data) ? data : data.data || []);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Fetch orders when assign dialog opens
-  useEffect(() => {
-    if (isAssignOrderDialogOpen) {
-      fetchAvailableOrders();
-    }
-    // eslint-disable-next-line
-  }, [isAssignOrderDialogOpen]);
 
   // Unique lists for filters
   const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || '')))].filter(Boolean);
@@ -156,32 +126,15 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // 3. Add dynamic edit associate
-  const handleEditSubmit = async (e) => {
+  // Submit edited associate data
+  const handleEditSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${selectedAssociate._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editFormData),
-      });
-      if (!res.ok) throw new Error('Failed to update associate');
-      const data = await res.json();
-      setAssociates(prev => prev.map(a => a._id === selectedAssociate._id ? data.data : a));
-      setIsEditModalOpen(false);
-      showToast('Associate details updated!');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const updatedAssociates = associates.map(associate =>
+      associate.id === selectedAssociate.id ? { ...associate, ...editFormData } : associate
+    );
+    setAssociates(updatedAssociates);
+    setIsEditModalOpen(false);
+    showToast('Associate details updated!');
   };
 
   // Toggle associate approval status
@@ -237,31 +190,11 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // 5. Assign order to associate
-  const handleOrderSubmit = async (e) => {
+  // Submit assigned order
+  const handleOrderSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/orders/${newOrderData.orderId}/assign`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ deliveryAssociateId: selectedAssociate._id }),
-      });
-      if (!res.ok) throw new Error('Failed to assign order');
-      showToast(`Order ${newOrderData.orderId} assigned to ${selectedAssociate.name}`);
-      setIsAssignOrderDialogOpen(false);
-      // Optionally, refetch associates/orders here
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    showToast(`Order ${newOrderData.orderId} assigned to ${selectedAssociate.name}`);
+    setIsAssignOrderDialogOpen(false);
   };
 
   // Add new associate (mock)
@@ -312,63 +245,32 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // 2. Add dynamic add associate
-  const handleAddSubmit = async (e) => {
+  // Submit new associate
+  const handleAddSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: addFormData.name,
-          email: addFormData.email,
-          phone: addFormData.phone,
-          status: addFormData.status,
-          vehicleType: addFormData.vehicleType,
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to add associate');
-      const data = await res.json();
-      setAssociates(prev => [data.data, ...prev]);
-      setIsAddModalOpen(false);
-      showToast('New associate added!');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 1. Add delete functionality
-  const handleDeleteAssociate = async (associateId) => {
-    if (!window.confirm('Are you sure you want to delete this associate?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${associateId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!res.ok) throw new Error('Failed to delete associate');
-      setAssociates(prev => prev.filter(a => a._id !== associateId));
-      showToast('Associate deleted!');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const newAssociate = {
+      _id: Date.now().toString(),
+      name: addFormData.name,
+      email: addFormData.email,
+      phone: addFormData.phone,
+      status: addFormData.status,
+      isActive: addFormData.status === 'Active',
+      vehicle: {
+        type: addFormData.vehicleType,
+      },
+      rating: 0,
+      ordersCompleted: 0,
+      joinedDate: new Date().toISOString().slice(0, 10),
+      lastActive: new Date().toISOString(),
+      isVerified: false,
+      activeAssignments: 0,
+      profilePic: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setAssociates(prev => [newAssociate, ...prev]);
+    setIsAddModalOpen(false);
+    showToast('New associate added!');
   };
 
   // Helper for last active
@@ -614,14 +516,6 @@ const DeliveryAssociateManagement = () => {
                             aria-label={associate.isVerified ? "Revoke approval" : "Approve associate"}
                           >
                             {associate.isVerified ? <FiX className="h-4 w-4 sm:h-5 sm:w-5" /> : <FiCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAssociate(associate._id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete"
-                            aria-label="Delete associate"
-                          >
-                            <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
                         </div>
                       </td>
@@ -923,11 +817,11 @@ const DeliveryAssociateManagement = () => {
                             required
                           >
                             <option value="">Select an order</option>
-                            {availableOrders.map(order => (
-                              <option key={order._id} value={order._id}>
-                                {order.orderNumber || order._id} - {order.deliveryAddress?.addressLine1 || ''}
-                              </option>
-                            ))}
+                            {/* This part needs to be dynamic, fetching orders from backend */}
+                            {/* For now, using mockOrders as a placeholder */}
+                            {/* <option value="ORD-1001">ORD-1001 - Farm Lane 12, Green Valley</option> */}
+                            {/* <option value="ORD-1002">ORD-1002 - Sunrise Farms, Block B</option> */}
+                            {/* <option value="ORD-1003">ORD-1003 - Riverbank, Plot 7</option> */}
                           </select>
                         </div>
                         <div>
