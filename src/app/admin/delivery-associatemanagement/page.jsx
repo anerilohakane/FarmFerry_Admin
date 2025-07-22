@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FiEdit, FiTrash2, FiCheck, FiX, FiUserPlus, FiSearch, FiFilter, FiRefreshCw, FiInfo, FiTruck, FiMapPin, FiAward } from 'react-icons/fi';
+import { createDeliveryAssociate, updateDeliveryAssociate, deleteDeliveryAssociate, getAllDeliveryAssociates } from '../../../utils/api';
 
 // Toast notification component
 const Toast = ({ message, onClose }) => (
@@ -45,35 +46,39 @@ const DeliveryAssociateManagement = () => {
     name: '',
     email: '',
     phone: '',
+    password: '',
     status: 'Active',
-    vehicleType: 'Motorcycle',
+    vehicleType: 'bicycle',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    }
   });
 
+  // Fetch associates from backend
+  const fetchAssociates = async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('No token found. Please log in.');
+      setLoading(false);
+      return;
+    }
+    try {
+      const data = await getAllDeliveryAssociates({}, token);
+      setAssociates(Array.isArray(data.deliveryAssociates) ? data.deliveryAssociates : []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAssociates = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('No token found. Please log in.');
-        setLoading(false);
-        return;
-      }
-      try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!res.ok) throw new Error('Failed to fetch associates');
-        const data = await res.json();
-        setAssociates(Array.isArray(data) ? data : data.data || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAssociates();
   }, []);
 
@@ -126,15 +131,28 @@ const DeliveryAssociateManagement = () => {
     }));
   };
 
-  // Submit edited associate data
-  const handleEditSubmit = (e) => {
+  // Submit edited associate data (dynamic)
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const updatedAssociates = associates.map(associate =>
-      associate.id === selectedAssociate.id ? { ...associate, ...editFormData } : associate
-    );
-    setAssociates(updatedAssociates);
-    setIsEditModalOpen(false);
-    showToast('Associate details updated!');
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('token');
+    try {
+      await updateDeliveryAssociate(selectedAssociate._id, {
+        name: editFormData.name,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        status: editFormData.status,
+        vehicleType: editFormData.vehicleType,
+      }, token);
+      setIsEditModalOpen(false);
+      showToast('Associate details updated!');
+      fetchAssociates();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Toggle associate approval status
@@ -230,8 +248,16 @@ const DeliveryAssociateManagement = () => {
       name: '',
       email: '',
       phone: '',
+      password: '',
       status: 'Active',
-      vehicleType: 'Motorcycle',
+      vehicleType: 'bicycle',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+      }
     });
     setIsAddModalOpen(true);
   };
@@ -239,38 +265,84 @@ const DeliveryAssociateManagement = () => {
   // Handle add form changes
   const handleAddFormChange = (e) => {
     const { name, value } = e.target;
-    setAddFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name.startsWith('address.')) {
+      const field = name.split('.')[1];
+      setAddFormData(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [field]: value
+        }
+      }));
+    } else {
+      setAddFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
-  // Submit new associate
-  const handleAddSubmit = (e) => {
+  // Submit new associate (dynamic)
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const newAssociate = {
-      _id: Date.now().toString(),
-      name: addFormData.name,
-      email: addFormData.email,
-      phone: addFormData.phone,
-      status: addFormData.status,
-      isActive: addFormData.status === 'Active',
-      vehicle: {
-        type: addFormData.vehicleType,
-      },
-      rating: 0,
-      ordersCompleted: 0,
-      joinedDate: new Date().toISOString().slice(0, 10),
-      lastActive: new Date().toISOString(),
-      isVerified: false,
-      activeAssignments: 0,
-      profilePic: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setAssociates(prev => [newAssociate, ...prev]);
-    setIsAddModalOpen(false);
-    showToast('New associate added!');
+    setLoading(true);
+    setError(null);
+    if (!addFormData.password) {
+      setError('Password is required');
+      setLoading(false);
+      return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+      console.log('Payload:', {
+        name: addFormData.name,
+        email: addFormData.email,
+        phone: addFormData.phone,
+        password: addFormData.password,
+        status: addFormData.status,
+        vehicleType: addFormData.vehicleType,
+        address: { ...addFormData.address }
+      });
+      await createDeliveryAssociate({
+        name: addFormData.name,
+        email: addFormData.email,
+        phone: addFormData.phone,
+        password: addFormData.password,
+        status: addFormData.status,
+        vehicleType: addFormData.vehicleType,
+        address: {
+          street: addFormData.address.street,
+          city: addFormData.address.city,
+          state: addFormData.address.state,
+          postalCode: addFormData.address.postalCode,
+          country: addFormData.address.country
+        }
+      }, token);
+      setIsAddModalOpen(false);
+      showToast('New associate added!');
+      fetchAssociates();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete associate
+  const handleDeleteAssociate = async (associate) => {
+    if (!window.confirm(`Are you sure you want to delete ${associate.name}?`)) return;
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('token');
+    try {
+      await deleteDeliveryAssociate(associate._id, token);
+      showToast('Associate deleted!');
+      fetchAssociates();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper for last active
@@ -516,6 +588,14 @@ const DeliveryAssociateManagement = () => {
                             aria-label={associate.isVerified ? "Revoke approval" : "Approve associate"}
                           >
                             {associate.isVerified ? <FiX className="h-4 w-4 sm:h-5 sm:w-5" /> : <FiCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssociate(associate)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete"
+                            aria-label="Delete associate"
+                          >
+                            <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </button>
                         </div>
                       </td>
@@ -938,6 +1018,18 @@ const DeliveryAssociateManagement = () => {
                             required
                           />
                         </div>
+                        <div>
+                          <label htmlFor="add-password" className="block text-sm font-medium text-gray-700">Password</label>
+                          <input
+                            type="password"
+                            name="password"
+                            id="add-password"
+                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                            value={addFormData.password}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label htmlFor="add-status" className="block text-sm font-medium text-gray-700">Status</label>
@@ -964,12 +1056,77 @@ const DeliveryAssociateManagement = () => {
                               onChange={handleAddFormChange}
                               required
                             >
-                              <option value="Motorcycle">Motorcycle</option>
-                              <option value="Car">Car</option>
-                              <option value="Bicycle">Bicycle</option>
-                              <option value="Scooter">Scooter</option>
+                              <option value="bicycle">Bicycle</option>
+                              <option value="motorcycle">Motorcycle</option>
+                              <option value="car">Car</option>
+                              <option value="van">Van</option>
+                              <option value="truck">Truck</option>
                             </select>
                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label htmlFor="add-address-street" className="block text-sm font-medium text-gray-700">Street</label>
+                            <input
+                              type="text"
+                              name="address.street"
+                              id="add-address-street"
+                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                              value={addFormData.address.street}
+                              onChange={handleAddFormChange}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="add-address-city" className="block text-sm font-medium text-gray-700">City</label>
+                            <input
+                              type="text"
+                              name="address.city"
+                              id="add-address-city"
+                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                              value={addFormData.address.city}
+                              onChange={handleAddFormChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label htmlFor="add-address-state" className="block text-sm font-medium text-gray-700">State</label>
+                            <input
+                              type="text"
+                              name="address.state"
+                              id="add-address-state"
+                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                              value={addFormData.address.state}
+                              onChange={handleAddFormChange}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="add-address-postalCode" className="block text-sm font-medium text-gray-700">Postal Code</label>
+                            <input
+                              type="text"
+                              name="address.postalCode"
+                              id="add-address-postalCode"
+                              className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                              value={addFormData.address.postalCode}
+                              onChange={handleAddFormChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="add-address-country" className="block text-sm font-medium text-gray-700">Country</label>
+                          <input
+                            type="text"
+                            name="address.country"
+                            id="add-address-country"
+                            className="mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                            value={addFormData.address.country}
+                            onChange={handleAddFormChange}
+                            required
+                          />
                         </div>
                       </div>
                     </div>

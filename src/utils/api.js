@@ -146,6 +146,32 @@ export async function getAllDeliveryAssociates(params = {}, token) {
   return res.data;
 }
 
+// Create a new delivery associate (Admin)
+export async function createDeliveryAssociate(data, token) {
+  return apiRequest('/api/v1/admin/delivery-associates', {
+    method: 'POST',
+    body: data,
+    token
+  });
+}
+
+// Update a delivery associate (Admin)
+export async function updateDeliveryAssociate(id, data, token) {
+  return apiRequest(`/api/v1/admin/delivery-associates/${id}`, {
+    method: 'PUT',
+    body: data,
+    token
+  });
+}
+
+// Delete a delivery associate (Admin)
+export async function deleteDeliveryAssociate(id, token) {
+  return apiRequest(`/api/v1/admin/delivery-associates/${id}`, {
+    method: 'DELETE',
+    token
+  });
+}
+
 // Auth API utilities
 export async function loginAdmin(credentials) {
   console.log('🔐 Admin login attempt:', { email: credentials.email });
