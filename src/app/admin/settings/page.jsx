@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { User, Lock, Save, Eye, EyeOff, Bell, Shield, Smartphone, Mail, MapPin, Phone, Calendar, Building2, CheckCircle, AlertCircle } from 'lucide-react';
 import { getAdminProfile, updateAdminProfile, changeAdminPassword, apiRequest } from '../../../utils/api';
 import { useAdminProfile } from '../../../context/AdminProfileContext';
@@ -550,4 +550,10 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default function SettingsPageWithSuspense() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xl">Loading Settings...</div>}>
+      <SettingsPage />
+    </Suspense>
+  );
+}
