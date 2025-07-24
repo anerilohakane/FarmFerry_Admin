@@ -20,8 +20,6 @@ const DeliveryAssociateManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [regionFilter, setRegionFilter] = useState('All');
-  const [specializationFilter, setSpecializationFilter] = useState('All');
   const [selectedAssociate, setSelectedAssociate] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -82,19 +80,13 @@ const DeliveryAssociateManagement = () => {
     fetchAssociates();
   }, []);
 
-  // Unique lists for filters
-  const regions = ['All', ...Array.from(new Set(associates.map(a => a.address?.region || '')))].filter(Boolean);
-  const specializations = ['All', ...Array.from(new Set(associates.map(a => a.specialization || '')))].filter(Boolean);
-
   // Filter associates based on search and filters
   const filteredAssociates = associates.filter(associate => {
     const matchesSearch = (associate.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (associate.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (associate.phone || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || (associate.isActive ? 'Active' : 'Inactive') === statusFilter || (associate.status === statusFilter);
-    const matchesRegion = regionFilter === 'All' || (associate.address?.region || '') === regionFilter;
-    const matchesSpec = specializationFilter === 'All' || (associate.specialization || '') === specializationFilter;
-    return matchesSearch && matchesStatus && matchesRegion && matchesSpec;
+    return matchesSearch && matchesStatus;
   });
 
   // Toast helper
@@ -116,7 +108,7 @@ const DeliveryAssociateManagement = () => {
       email: associate.email,
       phone: associate.phone,
       status: associate.status,
-      vehicleType: associate.vehicleType,
+      vehicleType: associate.vehicle?.type || '', // <-- correct
     });
     setSelectedAssociate(associate);
     setIsEditModalOpen(true);
@@ -413,38 +405,6 @@ const DeliveryAssociateManagement = () => {
                 <option value="Suspended">Suspended</option>
               </select>
             </div>
-            <div>
-              <label htmlFor="region-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
-                <FiMapPin className="mr-1" />Region
-              </label>
-              <select
-                id="region-filter"
-                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
-                value={regionFilter}
-                onChange={(e) => setRegionFilter(e.target.value)}
-                aria-label="Filter by region"
-              >
-                {regions.map(region => (
-                  <option key={region} value={region}>{region}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="spec-filter" className="block text-xs font-semibold text-green-700 mb-1 flex items-center">
-                <FiAward className="mr-1" />Specialization
-              </label>
-              <select
-                id="spec-filter"
-                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
-                value={specializationFilter}
-                onChange={(e) => setSpecializationFilter(e.target.value)}
-                aria-label="Filter by specialization"
-              >
-                {specializations.map(spec => (
-                  <option key={spec} value={spec}>{spec}</option>
-                ))}
-              </select>
-            </div>
             
             {/* Reset Button */}
             <div className="flex items-end">
@@ -453,8 +413,6 @@ const DeliveryAssociateManagement = () => {
                 onClick={() => {
                   setSearchTerm('');
                   setStatusFilter('All');
-                  setRegionFilter('All');
-                  setSpecializationFilter('All');
                 }}
                 aria-label="Reset filters"
                 type="button"
@@ -779,10 +737,11 @@ const DeliveryAssociateManagement = () => {
                               onChange={handleEditFormChange}
                               required
                             >
-                              <option value="Motorcycle">Motorcycle</option>
-                              <option value="Car">Car</option>
-                              <option value="Bicycle">Bicycle</option>
-                              <option value="Scooter">Scooter</option>
+                              <option value="bicycle">Bicycle</option>
+                              <option value="motorcycle">Motorcycle</option>
+                              <option value="car">Car</option>
+                              <option value="van">Van</option>
+                              <option value="truck">Truck</option>
                             </select>
                           </div>
                         </div>

@@ -25,6 +25,54 @@ const SupplierManagementDashboard = () => {
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [previewedDocument, setPreviewedDocument] = useState(null);
 
+  // Add Supplier modal and logic
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSupplier, setNewSupplier] = useState({
+    businessName: '',
+    ownerName: '',
+    email: '',
+    phone: '',
+    status: 'pending',
+    address: { street: '' },
+  });
+
+  const handleAddChange = (field, value) => {
+    if (field.startsWith('address.')) {
+      const addrField = field.split('.')[1];
+      setNewSupplier((prev) => ({ ...prev, address: { ...prev.address, [addrField]: value } }));
+    } else {
+      setNewSupplier((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleAddSupplier = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await fetch(`${API_URL}/api/v1/admin/suppliers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newSupplier),
+      });
+      setShowAddModal(false);
+      setNewSupplier({
+        businessName: '',
+        ownerName: '',
+        email: '',
+        phone: '',
+        status: 'pending',
+        address: { street: '' },
+      });
+      fetchSuppliers();
+    } catch {
+      setError('Failed to add supplier');
+    }
+    setLoading(false);
+  };
+
   // Fetch suppliers from backend
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -163,9 +211,17 @@ const SupplierManagementDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Supplier Management</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage and monitor your supplier relationships</p>
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Supplier Management</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage and monitor your supplier relationships</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm sm:text-base font-semibold shadow"
+          >
+            + Add Supplier
+          </button>
         </div>
 
         {/* Stats Cards - Responsive Grid */}
@@ -534,6 +590,95 @@ const SupplierManagementDashboard = () => {
                   className="px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 >
                   Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Supplier Modal - Responsive sizing */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="bg-white rounded-lg w-full max-w-xs sm:max-w-sm md:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Add Supplier</h2>
+              </div>
+              <div className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Business Name</label>
+                    <input
+                      type="text"
+                      value={newSupplier.businessName}
+                      onChange={(e) => handleAddChange('businessName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Owner Name</label>
+                    <input
+                      type="text"
+                      value={newSupplier.ownerName}
+                      onChange={(e) => handleAddChange('ownerName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={newSupplier.email}
+                      onChange={(e) => handleAddChange('email', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={newSupplier.phone}
+                      onChange={(e) => handleAddChange('phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Status</label>
+                    <select
+                      value={newSupplier.status}
+                      onChange={(e) => handleAddChange('status', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="blocked">Blocked</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4 sm:mt-6">
+                  <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Address</label>
+                  <input
+                    type="text"
+                    value={newSupplier.address?.street || ''}
+                    onChange={(e) => handleAddChange('address.street', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  />
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-end space-x-2 sm:space-x-3">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3 py-1 sm:px-4 sm:py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddSupplier}
+                  className="px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                >
+                  Add Supplier
                 </button>
               </div>
             </div>

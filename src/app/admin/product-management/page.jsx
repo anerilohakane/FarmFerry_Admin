@@ -162,7 +162,7 @@ const ProductManagementDashboard = () => {
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
             <Plus size={20} />
             Add Product
@@ -355,9 +355,11 @@ const ProductManagementDashboard = () => {
   );
 
   const ProductForm = ({ product, onSave, onCancel, isEditing }) => {
+    // Set default category to first available from categories
+    const defaultCategory = product?.category || (categories[0]?.name || '');
     const [formData, setFormData] = useState({
       name: product?.name || '',
-      category: product?.category || 'Electronics',
+      category: defaultCategory,
       price: product?.price || '',
       stock: product?.stock || '',
       status: product?.status || 'Active',
@@ -366,8 +368,21 @@ const ProductManagementDashboard = () => {
     });
 
     const handleSubmit = () => {
-      if (!formData.name || !formData.category || !formData.price || !formData.stock || !formData.status || !formData.images || formData.images.length === 0) {
-        alert('Please fill in all required fields, including at least one image');
+      // Determine if adding or editing
+      const isAdding = !isEditing;
+      const hasExistingImage = isEditing && product?.imageUrl;
+      // Defensive: safely get images length
+      const imagesLength = formData.images ? formData.images.length : 0;
+      // Validate all required fields
+      if (
+        !formData.name ||
+        !formData.category ||
+        !formData.price ||
+        !formData.stock ||
+        !formData.status ||
+        (!hasExistingImage && imagesLength === 0)
+      ) {
+        alert('Please fill in all required fields' + (isAdding ? ', including at least one image' : ''));
         return;
       }
       // Find the categoryId from the selected category name
@@ -376,6 +391,7 @@ const ProductManagementDashboard = () => {
         const found = categories.find(c => c.name === formData.category);
         if (found) categoryId = found.id;
       }
+      console.log('Submitting with categoryId:', categoryId); // Debug log
       const submitData = new FormData();
       submitData.append('name', formData.name);
       submitData.append('categoryId', categoryId);
@@ -383,8 +399,14 @@ const ProductManagementDashboard = () => {
       submitData.append('stockQuantity', formData.stock);
       submitData.append('status', formData.status);
       submitData.append('description', formData.description);
-      for (let i = 0; i < formData.images.length; i++) {
-        submitData.append('images', formData.images[i]);
+      if (formData.images && formData.images.length > 0) {
+        for (let i = 0; i < formData.images.length; i++) {
+          submitData.append('images', formData.images[i]);
+        }
+      }
+      // Log all FormData entries for debugging
+      for (let pair of submitData.entries()) {
+        console.log('FormData:', pair[0], pair[1]);
       }
       onSave({
         ...formData,
@@ -486,12 +508,24 @@ const ProductManagementDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Product Image *
                 </label>
+                {/* Show current image if editing and imageUrl exists */}
+                {isEditing && product?.imageUrl && (
+                  <div className="mb-2">
+                    <span className="block text-xs text-gray-500 mb-1">Current Image:</span>
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-24 h-24 object-cover rounded border"
+                    />
+                  </div>
+                )}
                 <input
                   type="file"
                   accept="image/*"
                   multiple
                   onChange={(e) => setFormData({ ...formData, images: e.target.files })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
                 />
               </div>
             </div>

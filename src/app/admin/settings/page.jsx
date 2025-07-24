@@ -3,9 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Lock, Save, Eye, EyeOff, Bell, Shield, Smartphone, Mail, MapPin, Phone, Calendar, Building2, CheckCircle, AlertCircle } from 'lucide-react';
 import { getAdminProfile, updateAdminProfile, changeAdminPassword, apiRequest } from '../../../utils/api';
+import { useAdminProfile } from '../../../context/AdminProfileContext';
+import { useSearchParams } from 'next/navigation';
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get('tab') || 'profile';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -21,11 +25,14 @@ const SettingsPage = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const fileInputRef = useRef();
+  const { adminProfile, setAdminProfile } = useAdminProfile();
 
   useEffect(() => {
+    // If the tab param changes, update activeTab
+    setActiveTab(searchParams?.get('tab') || 'profile');
     const token = localStorage.getItem('token');
     getAdminProfile(token).then(admin => {
-      setProfileData({
+      const profile = {
         fullName: `${admin.name.firstName} ${admin.name.lastName}`,
         email: admin.email,
         phone: admin.phone || '',
@@ -33,7 +40,12 @@ const SettingsPage = () => {
         company: admin.company || '',
         joinDate: admin.joinDate ? admin.joinDate.split('T')[0] : '',
         avatar: admin.avatar || ''
-      });
+      };
+      setProfileData(profile);
+      // Only update context if different
+      if (!adminProfile || JSON.stringify(adminProfile) !== JSON.stringify(profile)) {
+        setAdminProfile(profile);
+      }
       setNotifications(admin.notificationPreferences || {
         orderUpdates: true,
         priceAlerts: false,
@@ -42,7 +54,7 @@ const SettingsPage = () => {
       });
       setLoading(false);
     });
-  }, []);
+  }, [setAdminProfile, searchParams]);
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
@@ -61,6 +73,7 @@ const SettingsPage = () => {
         notificationPreferences: notifications
       }, token);
       setSaveStatus('success');
+      setAdminProfile(profileData); // update context
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (err) {
       setSaveStatus('error');
@@ -107,7 +120,16 @@ const SettingsPage = () => {
         token,
         isFormData: true
       });
-      setProfileData((prev) => ({ ...prev, avatar: res.data.avatar }));
+      // First update local state
+      setProfileData((prev) => {
+        const updated = { ...prev, avatar: res.data.avatar };
+        return updated;
+      });
+      // Then update context after state update
+      setAdminProfile((prev) => ({
+        ...prev,
+        avatar: res.data.avatar
+      }));
     } catch (err) {
       setAvatarError(err.message || 'Failed to upload avatar');
     } finally {
