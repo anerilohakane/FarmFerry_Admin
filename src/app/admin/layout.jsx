@@ -297,7 +297,7 @@ const AdminLayout = ({ children }) => {
         )} */}
         
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-4">
+        <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
           <nav className="px-2 sm:px-4 space-y-1">
             {sidebarItems.map((item, index) => {
               const isActive = activeItem === item.label;
