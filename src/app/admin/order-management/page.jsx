@@ -577,7 +577,7 @@ const OrderManagementDashboard = () => {
                 <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
                   <p><span className="font-medium">Name:</span> {selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</p>
                   <p><span className="font-medium">Email:</span> {selectedOrder?.customer?.email}</p>
-                  <p><span className="font-medium">Phone:</span> {selectedOrder?.customer?.phone || 'N/A'}</p>
+                  <p><span className="font-medium">Phone:</span> <span className="ml-1 text-green-700 font-semibold">{selectedOrder?.customer?.phone || 'N/A'}</span></p>
                   <p><span className="font-medium">Address:</span> {selectedOrder?.deliveryAddress?.street}, {selectedOrder?.deliveryAddress?.city}, {selectedOrder?.deliveryAddress?.state} {selectedOrder?.deliveryAddress?.postalCode}</p>
                 </div>
               </div>

@@ -36,7 +36,12 @@ const AdminLayout = ({ children }) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [activeItem, setActiveItem] = useState('Dashboard');
+  const [activeItem, setActiveItem] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('adminSidebarActive') || 'Dashboard';
+    }
+    return 'Dashboard';
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(12);
   const [isMobile, setIsMobile] = useState(false);
@@ -62,56 +67,48 @@ const AdminLayout = ({ children }) => {
     { 
       icon: Home, 
       label: 'Dashboard', 
-      active: activeItem === 'Dashboard',
       description: 'Overview & Analytics',
       route: '/admin'
     },
     { 
       icon: Truck, 
       label: 'Supplier Management',
-      active: activeItem === 'Supplier Management',
       description: 'Manage suppliers',
       route: '/admin/supplier-management'
     },
     { 
       icon: Truck, 
       label: 'Delivery Associates',
-      active: activeItem === 'Delivery Associates',
       description: 'Manage delivery team',
       route: '/admin/delivery-associatemanagement'
     },
     { 
       icon: Package, 
       label: 'Product Management',
-      active: activeItem === 'Product Management',
       description: 'Inventory & products',
       route: '/admin/product-management'
     },
     { 
       icon: ClipboardList, 
       label: 'Category Management',
-      active: activeItem === 'Category Management',
       description: 'Product categories',
       route: '/admin/category-management'
     },
     { 
       icon: ShoppingCart, 
       label: 'Order Management', 
-      active: activeItem === 'Order Management',
       description: 'Process orders',
       route: '/admin/order-management'
     },
     { 
       icon: BarChart3, 
       label: 'Reports & Analytics',
-      active: activeItem === 'Reports & Analytics',
       description: 'Sales & Performance',
       route: '/admin/reports-analytics'
     },
     { 
       icon: Settings, 
       label: 'Settings',
-      active: activeItem === 'Settings',
       description: 'System configuration',
       route: '/admin/settings'
     },
@@ -197,6 +194,7 @@ const AdminLayout = ({ children }) => {
 
   const handleItemClick = (item) => {
     setActiveItem(item.label);
+    localStorage.setItem('adminSidebarActive', item.label);
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -207,6 +205,7 @@ const AdminLayout = ({ children }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('adminSidebarActive');
     router.replace('/loginpage');
   };
 
@@ -300,39 +299,41 @@ const AdminLayout = ({ children }) => {
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="px-2 sm:px-4 space-y-1">
-            {sidebarItems.map((item, index) => (
-              <div key={index} className="relative group">
-                <button
-                  onClick={() => handleItemClick(item)}
-                  className={`w-full flex items-center px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-all duration-200 ${
-                    item.active 
-                      ? 'bg-green-50 text-green-700 border-r-4 border-green-500 shadow-sm' 
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
-                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
-                  title={sidebarCollapsed ? item.label : ''}
-                >
-                  <div className="flex items-center space-x-3 w-full">
-                    <item.icon className={`w-5 h-5 flex-shrink-0 ${item.active ? 'animate-pulse' : ''}`} />
-                    {!sidebarCollapsed && (
-                      <div className="flex-1 text-left">
-                        <span className="font-medium block text-sm sm:text-base">{item.label}</span>
-                        <p className="text-xs text-gray-500 mt-1 hidden sm:block">
-                          {item.description}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </button>
-                
-                {/* Tooltip for collapsed sidebar */}
-                {sidebarCollapsed && (
-                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
-                    <div className="font-medium">{item.label}</div>
-                    <div className="text-xs text-gray-300">{item.description}</div>
-                  </div>
-                )}
-              </div>
-            ))}
+            {sidebarItems.map((item, index) => {
+              const isActive = activeItem === item.label;
+              return (
+                <div key={index} className="relative group">
+                  <button
+                    onClick={() => handleItemClick(item)}
+                    className={`w-full flex items-center px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-green-50 text-green-700 border-r-4 border-green-500 shadow-sm' 
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
+                    } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    title={sidebarCollapsed ? item.label : ''}
+                  >
+                    <div className="flex items-center space-x-3 w-full">
+                      <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`} />
+                      {!sidebarCollapsed && (
+                        <div className="flex-1 text-left">
+                          <span className="font-medium block text-sm sm:text-base">{item.label}</span>
+                          <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                            {item.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                  {/* Tooltip for collapsed sidebar */}
+                  {sidebarCollapsed && (
+                    <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs text-gray-300">{item.description}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
 

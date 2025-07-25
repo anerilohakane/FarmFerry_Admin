@@ -48,6 +48,7 @@ const LoginPage = () => {
 
     try {
       await authLogin(formData.email, formData.password);
+      localStorage.removeItem('adminSidebarActive');
       // Redirect to admin dashboard
       router.replace('/admin');
     } catch (err) {
