@@ -7,17 +7,17 @@ import { getAllOrders, getOrderById, updateOrderStatus, assignDeliveryAssociate,
 const STATUS_TRANSITIONS_MAP = {
   pending: ['processing', 'cancelled'],
   processing: ['out_for_delivery', 'cancelled'],
-  out_for_delivery: ['delivered', 'failed'],
+  out_for_delivery: ['delivered', 'damaged'],
   delivered: ['returned'],
   cancelled: [],
   returned: [],
-  failed: [],
+  damaged: [],
 };
 
 const STATUS_TRANSITIONS = {
-  admin: ['pending', 'processing', 'out_for_delivery', 'delivered', 'cancelled', 'returned'],
-  supplier: ['processing', 'out_for_delivery', 'cancelled'],
-  deliveryAssociate: ['picked_up', 'on_the_way', 'delivered', 'failed'],
+  admin: ['pending', 'processing', 'out_for_delivery', 'delivered', 'cancelled', 'returned', 'damaged'],
+  supplier: ['processing', 'out_for_delivery', 'cancelled', 'damaged'],
+  deliveryAssociate: ['picked_up', 'on_the_way', 'delivered'],
   customer: ['cancelled', 'returned'],
 };
 
@@ -232,6 +232,7 @@ const OrderManagementDashboard = () => {
       case 'delivered': return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       case 'returned': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'damaged': return 'bg-amber-200 text-amber-900 border-amber-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -244,6 +245,7 @@ const OrderManagementDashboard = () => {
       case 'delivered': return <CheckCircle className="w-4 h-4" />;
       case 'cancelled': return <XCircle className="w-4 h-4" />;
       case 'returned': return <AlertCircle className="w-4 h-4" />;
+      case 'damaged': return <AlertCircle className="w-4 h-4 text-amber-600" />;
       default: return <AlertCircle className="w-4 h-4" />;
     }
   };
@@ -295,6 +297,7 @@ const OrderManagementDashboard = () => {
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
               <option value="returned">Returned</option>
+              <option value="damaged">Damaged</option>
             </select>
             
             <select 
@@ -551,109 +554,126 @@ const OrderManagementDashboard = () => {
   );
 
   // Order Details Modal Component
-  const OrderDetailsModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg md:text-xl font-bold text-gray-900">Order Details - {selectedOrder?.orderId?.slice(-6)}</h3>
-            <button
-              onClick={() => setShowOrderDetails(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-            >
-              <X className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-4 md:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
-                  <User className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
-                  Customer Information
-                </h4>
-                <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
-                  <p><span className="font-medium">Name:</span> {selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</p>
-                  <p><span className="font-medium">Email:</span> {selectedOrder?.customer?.email}</p>
-                  <p><span className="font-medium">Phone:</span> <span className="ml-1 text-green-700 font-semibold">{selectedOrder?.customer?.phone || 'N/A'}</span></p>
-                  <p><span className="font-medium">Address:</span> {selectedOrder?.deliveryAddress?.street}, {selectedOrder?.deliveryAddress?.city}, {selectedOrder?.deliveryAddress?.state} {selectedOrder?.deliveryAddress?.postalCode}</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
-                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
-                  Order Information
-                </h4>
-                <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
-                  <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder?.createdAt)}</p>
-                  <p><span className="font-medium">Estimated Delivery:</span> {formatDate(selectedOrder?.estimatedDeliveryDate)}</p>
-                  <p className="flex items-center"><span className="font-medium">Status:</span> 
-                    <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(selectedOrder?.status)}`}>
-                      {getStatusIcon(selectedOrder?.status)}
-                      {selectedOrder?.status?.replace('_', ' ')}
-                    </span>
-                  </p>
-                  <p><span className="font-medium">Payment Method:</span> {selectedOrder?.paymentMethod?.replace('_', ' ')}</p>
-                  <p><span className="font-medium">Payment Status:</span> {selectedOrder?.paymentStatus}</p>
-                </div>
-              </div>
+  const OrderDetailsModal = () => {
+    const [showItems, setShowItems] = useState(false);
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">Order Details - {selectedOrder?.orderId?.slice(-6)}</h3>
+              <button
+                onClick={() => setShowOrderDetails(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
             </div>
-            
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
-                  <Package className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
-                  Items Ordered
-                </h4>
-                <div className="space-y-2">
-                  {selectedOrder?.items?.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0 text-xs md:text-sm">
-                      <div>
-                        <p className="font-medium">{item.product?.name}</p>
-                        <p className="text-gray-500">{item.quantity} units</p>
-                      </div>
-                      <p className="font-medium">{formatCurrency(item.totalPrice)}</p>
-                    </div>
-                  ))}
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-300 text-sm md:text-base">
-                    <p className="font-bold">Total Amount:</p>
-                    <p className="font-bold">{formatCurrency(selectedOrder?.totalAmount)}</p>
+          </div>
+          
+          <div className="p-4 md:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                    <User className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                    Customer Information
+                  </h4>
+                  <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
+                    <p><span className="font-medium">Name:</span> {selectedOrder?.customer?.firstName} {selectedOrder?.customer?.lastName}</p>
+                    <p><span className="font-medium">Email:</span> {selectedOrder?.customer?.email}</p>
+                    <p><span className="font-medium">Phone:</span> <span className="ml-1 text-green-700 font-semibold">{selectedOrder?.customer?.phone || 'N/A'}</span></p>
+                    <p><span className="font-medium">Address:</span> {selectedOrder?.deliveryAddress?.street}, {selectedOrder?.deliveryAddress?.city}, {selectedOrder?.deliveryAddress?.state} {selectedOrder?.deliveryAddress?.postalCode}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                    <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                    Order Information
+                  </h4>
+                  <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
+                    <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder?.createdAt)}</p>
+                    <p><span className="font-medium">Estimated Delivery:</span> {formatDate(selectedOrder?.estimatedDeliveryDate)}</p>
+                    <p className="flex items-center"><span className="font-medium">Status:</span> 
+                      <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(selectedOrder?.status)}`}>
+                        {getStatusIcon(selectedOrder?.status)}
+                        {selectedOrder?.status?.replace('_', ' ')}
+                      </span>
+                    </p>
+                    <p><span className="font-medium">Payment Method:</span> {selectedOrder?.paymentMethod?.replace('_', ' ')}</p>
+                    <p><span className="font-medium">Payment Status:</span> {selectedOrder?.paymentStatus}</p>
                   </div>
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
-                  <Truck className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
-                  Delivery Information
-                </h4>
-                <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
-                  {selectedOrder?.deliveryAssociate?.associate ? (
-                    <div>
-                      <p><span className="font-medium">Assigned to:</span> {selectedOrder.deliveryAssociate.associate.firstName} {selectedOrder.deliveryAssociate.associate.lastName}</p>
-                      <p><span className="font-medium">Contact:</span> {selectedOrder.deliveryAssociate.associate.phone}</p>
-                      <p><span className="font-medium">Assigned at:</span> {formatDate(selectedOrder.deliveryAssociate.assignedAt)}</p>
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+                  <button
+                    onClick={() => setShowItems(!showItems)}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
+                      <Package className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                      Items Ordered ({selectedOrder?.items?.length || 0} items)
+                    </h4>
+                    <div className={`transform transition-transform duration-200 ${showItems ? 'rotate-180' : ''}`}>
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
-                  ) : (
-                    <p className="text-gray-500">No delivery associate assigned</p>
-                  )}
-                  {selectedOrder?.notes && (
-                    <div>
-                      <p className="font-medium">Special Instructions:</p>
-                      <p className="text-gray-700 bg-white p-2 rounded border text-xs">{selectedOrder.notes}</p>
+                  </button>
+                  
+                  {showItems && (
+                    <div className="mt-3 space-y-2">
+                      {selectedOrder?.items?.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0 text-xs md:text-sm">
+                          <div>
+                            <p className="font-medium">{item.product?.name}</p>
+                            <p className="text-gray-500">{item.quantity} units</p>
+                          </div>
+                          <p className="font-medium">{formatCurrency(item.totalPrice)}</p>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-300 text-sm md:text-base">
+                        <p className="font-bold">Total Amount:</p>
+                        <p className="font-bold">{formatCurrency(selectedOrder?.totalAmount)}</p>
+                      </div>
                     </div>
                   )}
+                </div>
+                
+                <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                    <Truck className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                    Delivery Information
+                  </h4>
+                  <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
+                    {selectedOrder?.deliveryAssociate?.associate ? (
+                      <div>
+                        <p><span className="font-medium">Assigned to:</span> {selectedOrder.deliveryAssociate.associate.firstName} {selectedOrder.deliveryAssociate.associate.lastName}</p>
+                        <p><span className="font-medium">Contact:</span> {selectedOrder.deliveryAssociate.associate.phone}</p>
+                        <p><span className="font-medium">Assigned at:</span> {formatDate(selectedOrder.deliveryAssociate.assignedAt)}</p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">No delivery associate assigned</p>
+                    )}
+                    {selectedOrder?.notes && (
+                      <div>
+                        <p className="font-medium">Special Instructions:</p>
+                        <p className="text-gray-700 bg-white p-2 rounded border text-xs">{selectedOrder.notes}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Order Status Update Form Component
   const OrderStatusUpdateForm = () => {
@@ -717,7 +737,7 @@ const OrderManagementDashboard = () => {
                 <ul className="list-disc ml-4 space-y-1">
                   <li><b>Admin:</b> Can update to any status</li>
                   <li><b>Supplier:</b> Can set Processing, Out for Delivery, Cancelled (before handover)</li>
-                  <li><b>Delivery Associate:</b> Can set Picked Up, On the Way, Delivered, Failed (for delivery)</li>
+                  <li><b>Delivery Associate:</b> Can set Picked Up, On the Way, Delivered</li>
                   <li><b>Customer:</b> Can request Cancelled (if pending/processing), Returned (if delivered)</li>
                 </ul>
               </div>

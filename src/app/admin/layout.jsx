@@ -101,6 +101,12 @@ const AdminLayout = ({ children }) => {
       route: '/admin/order-management'
     },
     { 
+      icon: TrendingUp, 
+      label: 'Review Management',
+      description: 'Customer reviews',
+      route: '/admin/review-management'
+    },
+    { 
       icon: BarChart3, 
       label: 'Reports & Analytics',
       description: 'Sales & Performance',
@@ -509,9 +515,9 @@ const AdminLayout = ({ children }) => {
                           <p className="font-medium text-gray-900 text-sm sm:text-base">
                             Admin User
                           </p>
-                          <p className="text-xs sm:text-sm text-gray-500">
+                          {/* <p className="text-xs sm:text-sm text-gray-500">
                             Super Admin
-                          </p>
+                          </p> */}
                         </div>
                       </div>
                     </div>

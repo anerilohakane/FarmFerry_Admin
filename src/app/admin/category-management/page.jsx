@@ -1,18 +1,27 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, X, Check } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, X, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { apiRequest } from '@/utils/api';
 
 const CategoryManagementDashboard = () => {
   const [categories, setCategories] = useState([]);
+  // No separate subCategories state
+  const [expandedCategories, setExpandedCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddSubForm, setShowAddSubForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', status: 'Active', image: null });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    description: '', 
+    status: 'Active', 
+    image: null,
+    parentId: null 
+  });
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
 
@@ -44,9 +53,20 @@ const CategoryManagementDashboard = () => {
     }
   }
 
+  const toggleCategoryExpand = (categoryId) => {
+    setExpandedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId) 
+        : [...prev, categoryId]
+    );
+  };
+
+  // Only show main categories in the main list
   const displayedCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    (!category.parent && !category.parentId) && (
+      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   // Add Category
@@ -60,12 +80,10 @@ const CategoryManagementDashboard = () => {
       submitData.append('description', formData.description);
       submitData.append('isActive', formData.status === 'Active');
       if (formData.image) {
-        console.log('Image file:', formData.image);
         submitData.append('image', formData.image);
       }
-      // Log all FormData entries
-      for (let pair of submitData.entries()) {
-        console.log('FormData:', pair[0], pair[1]);
+      if (formData.parentId) {
+        submitData.append('parent', formData.parentId);
       }
       await apiRequest('/api/v1/categories', {
         method: 'POST',
@@ -74,7 +92,8 @@ const CategoryManagementDashboard = () => {
       });
       await fetchCategories();
       setShowAddForm(false);
-      setFormData({ name: '', description: '', status: 'Active', image: null });
+      setShowAddSubForm(false);
+      setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -95,19 +114,18 @@ const CategoryManagementDashboard = () => {
       if (formData.image) {
         submitData.append('image', formData.image);
       }
+      if (formData.parentId) {
+        submitData.append('parent', formData.parentId);
+      }
       await apiRequest(`/api/v1/categories/${selectedCategory._id}`, {
         method: 'PUT',
         body: submitData,
         isFormData: true
       });
-      setCategories(prev => prev.map(cat =>
-        cat._id === selectedCategory._id
-          ? { ...cat, ...formData }
-          : cat
-      ));
+      await fetchCategories();
       setShowEditForm(false);
       setSelectedCategory(null);
-      setFormData({ name: '', description: '', status: 'Active', image: null });
+      setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -126,7 +144,6 @@ const CategoryManagementDashboard = () => {
       });
       await fetchCategories();
       setShowDeleteDialog(false);
-      
       setSelectedCategory(null);
     } catch (err) {
       setActionError(err.message);
@@ -141,7 +158,8 @@ const CategoryManagementDashboard = () => {
       name: category.name,
       description: category.description,
       status: category.isActive ? 'Active' : 'Inactive',
-      image: null
+      image: null,
+      parentId: category.parentId || (category.parent ? category.parent._id : null)
     });
     setShowEditForm(true);
   };
@@ -151,11 +169,28 @@ const CategoryManagementDashboard = () => {
     setShowDeleteDialog(true);
   };
 
+  const openAddSubCategoryForm = (category) => {
+    setSelectedCategory(category);
+    setFormData({
+      name: '',
+      description: '',
+      status: 'Active',
+      image: null,
+      parentId: category._id
+    });
+    setShowAddSubForm(true);
+  };
+
   const resetForm = () => {
-    setFormData({ name: '', description: '', status: 'Active', image: null });
+    setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
     setShowAddForm(false);
+    setShowAddSubForm(false);
     setShowEditForm(false);
     setSelectedCategory(null);
+  };
+
+  const getSubCategories = (categoryId) => {
+    return categories.filter(cat => cat.parent === categoryId || (cat.parent && cat.parent._id === categoryId));
   };
 
   return (
@@ -226,51 +261,128 @@ const CategoryManagementDashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {displayedCategories.map((category) => (
-                      <tr key={category._id || category.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {category.image?.url && (
-                              <img
-                                src={category.image.url}
-                                alt={category.name}
-                                className="w-10 h-10 object-cover rounded border"
-                              />
+                      <React.Fragment key={category._id || category.id}>
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => toggleCategoryExpand(category._id || category.id)}
+                                className="text-gray-500 hover:text-gray-700"
+                              >
+                                {expandedCategories.includes(category._id || category.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </button>
+                              {category.image?.url && (
+                                <img
+                                  src={`${category.image.url}?v=${Date.now()}`}
+                                  alt={category.name}
+                                  className="w-10 h-10 object-cover rounded border"
+                                />
+                              )}
+                              <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-500 max-w-xs truncate">{category.description}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              category.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {category.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(category.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => openAddSubCategoryForm(category)}
+                                className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors"
+                                aria-label="Add subcategory"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => openEditForm(category)}
+                                className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
+                                aria-label="Edit category"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => openDeleteDialog(category)}
+                                className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
+                                aria-label="Delete category"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedCategories.includes(category._id || category.id) && (
+                          <>
+                            {getSubCategories(category._id || category.id).map((subCategory) => (
+                              <tr key={subCategory._id || subCategory.id} className="bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center gap-2 pl-8">
+                                    {subCategory.image?.url && (
+                                      <img
+                                        src={`${subCategory.image.url}?v=${Date.now()}`}
+                                        alt={subCategory.name}
+                                        className="w-10 h-10 object-cover rounded border"
+                                      />
+                                    )}
+                                    <span className="text-sm font-medium text-gray-900">{subCategory.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-500 max-w-xs truncate">{subCategory.description}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    subCategory.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {subCategory.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(subCategory.createdAt).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => openEditForm(subCategory)}
+                                      className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
+                                      aria-label="Edit subcategory"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => openDeleteDialog(subCategory)}
+                                      className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
+                                      aria-label="Delete subcategory"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {getSubCategories(category._id || category.id).length === 0 && (
+                              <tr className="bg-gray-50">
+                                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                                  No subcategories found
+                                </td>
+                              </tr>
                             )}
-                            <span className="text-sm font-medium text-gray-900">{category.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-500 max-w-xs truncate">{category.description}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            category.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {category.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(category.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => openEditForm(category)}
-                              className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
-                              aria-label="Edit category"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => openDeleteDialog(category)}
-                              className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
-                              aria-label="Delete category"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                          </>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -287,9 +399,19 @@ const CategoryManagementDashboard = () => {
                   displayedCategories.map((category) => (
                     <div key={category._id || category.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => toggleCategoryExpand(category._id || category.id)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          {expandedCategories.includes(category._id || category.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
                         {category.image?.url && (
                           <img
-                            src={category.image.url}
+                            src={`${category.image.url}?v=${Date.now()}`}
                             alt={category.name}
                             className="w-10 h-10 object-cover rounded border"
                           />
@@ -302,6 +424,13 @@ const CategoryManagementDashboard = () => {
                           {new Date(category.createdAt).toLocaleDateString()}
                         </span>
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => openAddSubCategoryForm(category)}
+                            className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors"
+                            aria-label="Add subcategory"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => openEditForm(category)}
                             className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
@@ -318,6 +447,51 @@ const CategoryManagementDashboard = () => {
                           </button>
                         </div>
                       </div>
+
+                      {expandedCategories.includes(category._id || category.id) && (
+                        <div className="mt-3 pl-6 space-y-3">
+                          {getSubCategories(category._id || category.id).map((subCategory) => (
+                            <div key={subCategory._id || subCategory.id} className="border-t border-gray-200 pt-3">
+                              <div className="flex items-center gap-2">
+                                {subCategory.image?.url && (
+                                  <img
+                                    src={`${subCategory.image.url}?v=${Date.now()}`}
+                                    alt={subCategory.name}
+                                    className="w-8 h-8 object-cover rounded border"
+                                  />
+                                )}
+                                <h4 className="text-sm font-medium text-gray-800">{subCategory.name}</h4>
+                              </div>
+                              <div className="mt-2 flex justify-between items-center">
+                                <span className="text-xs text-gray-500">
+                                  {new Date(subCategory.createdAt).toLocaleDateString()}
+                                </span>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => openEditForm(subCategory)}
+                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
+                                    aria-label="Edit subcategory"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => openDeleteDialog(subCategory)}
+                                    className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
+                                    aria-label="Delete subcategory"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {getSubCategories(category._id || category.id).length === 0 && (
+                            <div className="text-center text-sm text-gray-500 py-2">
+                              No subcategories found
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -333,11 +507,13 @@ const CategoryManagementDashboard = () => {
             </div>
 
             {/* Add Category Form Modal */}
-            {showAddForm && (
+            {(showAddForm || showAddSubForm) && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
                   <div className="flex justify-between items-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Add New Farm Category</h2>
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      {showAddSubForm ? 'Add New Subcategory' : 'Add New Farm Category'}
+                    </h2>
                     <button
                       onClick={resetForm}
                       className="text-gray-400 hover:text-gray-600 p-1"
@@ -348,13 +524,27 @@ const CategoryManagementDashboard = () => {
                   </div>
                   
                   <div className="space-y-3 sm:space-y-4">
+                    {showAddSubForm && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Parent Category
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedCategory?.name || ''}
+                          className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg bg-gray-100"
+                          readOnly
+                        />
+                      </div>
+                    )}
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category Name *
+                        {showAddSubForm ? 'Subcategory Name *' : 'Category Name *'}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g., Fresh Vegetables, Dairy Products"
+                        placeholder={showAddSubForm ? "e.g., Tomatoes, Carrots" : "e.g., Fresh Vegetables, Dairy Products"}
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -391,7 +581,7 @@ const CategoryManagementDashboard = () => {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category Image
+                        {showAddSubForm ? 'Subcategory Image' : 'Category Image'}
                       </label>
                       <input
                         type="file"
@@ -417,10 +607,10 @@ const CategoryManagementDashboard = () => {
                       >
                         {actionLoading ? (
                           <>
-                            Adding...
+                            {showAddSubForm ? 'Adding Subcategory...' : 'Adding Category...'}
                             <Check className="h-4 w-4" />
                           </>
-                        ) : 'Add Category'}
+                        ) : showAddSubForm ? 'Add Subcategory' : 'Add Category'}
                       </button>
                     </div>
                     {actionError && (
@@ -436,7 +626,9 @@ const CategoryManagementDashboard = () => {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
                   <div className="flex justify-between items-center mb-4 sm:mb-6">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Edit Farm Category</h2>
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      {formData.parentId ? 'Edit Subcategory' : 'Edit Farm Category'}
+                    </h2>
                     <button
                       onClick={resetForm}
                       className="text-gray-400 hover:text-gray-600 p-1"
@@ -445,22 +637,33 @@ const CategoryManagementDashboard = () => {
                       <X className="h-5 w-5" />
                     </button>
                   </div>
-                  
                   <div className="space-y-3 sm:space-y-4">
+                    {formData.parentId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Parent Category
+                        </label>
+                        <input
+                          type="text"
+                          value={categories.find(c => c._id === formData.parentId)?.name || ''}
+                          className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg bg-gray-100"
+                          readOnly
+                        />
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category Name *
+                        {formData.parentId ? 'Subcategory Name *' : 'Category Name *'}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g., Fresh Vegetables, Dairy Products"
+                        placeholder={formData.parentId ? "e.g., Tomatoes, Carrots" : "e.g., Fresh Vegetables, Dairy Products"}
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         required
                       />
                     </div>
-                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Description
@@ -473,7 +676,6 @@ const CategoryManagementDashboard = () => {
                         className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                     </div>
-                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Status
@@ -487,29 +689,38 @@ const CategoryManagementDashboard = () => {
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
-                    
-                    {selectedCategory?.image?.url && (
-                      <div className="mb-2">
-                        <span className="block text-xs text-gray-500 mb-1">Current Image:</span>
-                        <img
-                          src={selectedCategory.image.url}
-                          alt={selectedCategory.name}
-                          className="w-24 h-24 object-cover rounded border"
-                        />
-                      </div>
-                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category Image
+                        {formData.parentId ? 'Subcategory Image' : 'Category Image'}
                       </label>
+                      {/* Show preview of new image if selected, else show current image */}
+                      {formData.image ? (
+                        <div className="mb-2">
+                          <span className="block text-xs text-gray-500 mb-1">New Image Preview:</span>
+                          <img
+                            src={URL.createObjectURL(formData.image)}
+                            alt="Preview"
+                            className="w-24 h-24 object-cover rounded border"
+                          />
+                        </div>
+                      ) : selectedCategory?.image?.url && (
+                        <div className="mb-2">
+                          <span className="block text-xs text-gray-500 mb-1">Current Image:</span>
+                          <img
+                            src={`${selectedCategory.image.url}?v=${Date.now()}`}
+                            alt={selectedCategory.name}
+                            className="w-24 h-24 object-cover rounded border"
+                          />
+                        </div>
+                      )}
                       <input
+                        key={selectedCategory?._id || selectedCategory?.id || 'fileinput'}
                         type="file"
                         accept="image/*"
                         onChange={e => setFormData({ ...formData, image: e.target.files[0] })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                       />
                     </div>
-                    
                     <div className="flex gap-3 pt-3 sm:pt-4">
                       <button
                         type="button"
@@ -529,7 +740,7 @@ const CategoryManagementDashboard = () => {
                             Updating...
                             <Check className="h-4 w-4" />
                           </>
-                        ) : 'Update Category'}
+                        ) : 'Update'}
                       </button>
                     </div>
                     {actionError && (
@@ -548,7 +759,9 @@ const CategoryManagementDashboard = () => {
                     <div className="bg-red-100 p-2 rounded-full">
                       <Trash2 className="h-5 sm:h-6 w-5 sm:w-6 text-red-600" />
                     </div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Delete Farm Category</h2>
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      {selectedCategory?.parentId ? 'Delete Subcategory' : 'Delete Farm Category'}
+                    </h2>
                   </div>
                   
                   <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">

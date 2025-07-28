@@ -1,6 +1,6 @@
 // src/utils/api.js
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // Updated to match backend port
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:9000'; // Updated to match backend port
 
 export async function apiRequest(endpoint, { method = 'GET', body, headers = {}, token, isFormData } = {}) {
   // Do not send token for login or register endpoints
@@ -32,6 +32,8 @@ export async function apiRequest(endpoint, { method = 'GET', body, headers = {},
   
   console.log('🌐 API Request:', {
     url: `${BASE_URL}${endpoint}`,
+    baseUrl: BASE_URL,
+    endpoint: endpoint,
     method,
     hasToken: !!token,
     body: body ? 'present' : 'none'
@@ -239,3 +241,56 @@ export async function changeAdminPassword(passwords, token) {
     token
   });
 } 
+
+// Review Management API utilities
+export async function getAllReviews(params = {}, token) {
+  const queryString = new URLSearchParams(params).toString();
+  const endpoint = `/api/v1/admin/reviews${queryString ? `?${queryString}` : ''}`;
+  console.log('📝 Fetching reviews with params:', params);
+  const res = await apiRequest(endpoint, { method: 'GET', token });
+  return res.data;
+}
+
+export async function getReviewById(reviewId, token) {
+  const res = await apiRequest(`/api/v1/admin/reviews/${reviewId}`, { method: 'GET', token });
+  return res.data.review;
+}
+
+export async function updateReviewStatus(reviewId, status, token) {
+  const body = { status };
+  const res = await apiRequest(`/api/v1/admin/reviews/${reviewId}/status`, { 
+    method: 'PUT', 
+    body, 
+    token 
+  });
+  return res.data.review;
+}
+
+export async function toggleReviewVisibility(reviewId, isVisible, token) {
+  const body = { isVisible };
+  const res = await apiRequest(`/api/v1/admin/reviews/${reviewId}/visibility`, { 
+    method: 'PUT', 
+    body, 
+    token 
+  });
+  return res.data.review;
+}
+
+export async function deleteReview(reviewId, token) {
+  await apiRequest(`/api/v1/admin/reviews/${reviewId}`, { method: 'DELETE', token });
+}
+
+export async function replyToReview(reviewId, content, token) {
+  const body = { content };
+  const res = await apiRequest(`/api/v1/admin/reviews/${reviewId}/reply`, { 
+    method: 'POST', 
+    body, 
+    token 
+  });
+  return res.data.review;
+}
+
+export async function getReviewStats(token) {
+  const res = await apiRequest('/api/v1/admin/reviews/stats', { method: 'GET', token });
+  return res.data;
+}
