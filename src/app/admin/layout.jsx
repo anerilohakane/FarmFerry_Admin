@@ -494,7 +494,7 @@ const AdminLayout = ({ children }) => {
                     <User className="w-8 h-8 rounded-full ring-2 ring-green-500 ring-offset-2 bg-gray-200 text-gray-400 p-1" />
                   )}
                   <span className="text-sm font-medium text-gray-700 hidden md:block">
-                    Admin
+                    {adminProfile?.fullName || 'Admin'}
                   </span>
                   <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block transition-transform duration-200" />
                 </button>
@@ -514,11 +514,11 @@ const AdminLayout = ({ children }) => {
                         )}
                         <div>
                           <p className="font-medium text-gray-900 text-sm sm:text-base">
-                            Admin User
+                            {adminProfile?.fullName || 'Admin User'}
                           </p>
-                          {/* <p className="text-xs sm:text-sm text-gray-500">
-                            Super Admin
-                          </p> */}
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            Admin
+                          </p>
                         </div>
                       </div>
                     </div>
