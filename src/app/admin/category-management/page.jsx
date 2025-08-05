@@ -15,6 +15,8 @@ const CategoryManagementDashboard = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showHandlingFeeEdit, setShowHandlingFeeEdit] = useState(false);
+  const [handlingFeeData, setHandlingFeeData] = useState({ categoryId: '', handlingFee: '' });
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
@@ -152,6 +154,29 @@ const CategoryManagementDashboard = () => {
     }
   };
 
+  // Update Handling Fee
+  const handleUpdateHandlingFee = async () => {
+    if (!handlingFeeData.categoryId || handlingFeeData.handlingFee === '') return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await apiRequest('/api/v1/categories/add-handling-fee', {
+        method: 'POST',
+        body: {
+          categoryId: handlingFeeData.categoryId,
+          handlingFee: parseFloat(handlingFeeData.handlingFee)
+        }
+      });
+      await fetchCategories();
+      setShowHandlingFeeEdit(false);
+      setHandlingFeeData({ categoryId: '', handlingFee: '' });
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const openEditForm = (category) => {
     setSelectedCategory(category);
     setFormData({
@@ -181,12 +206,22 @@ const CategoryManagementDashboard = () => {
     setShowAddSubForm(true);
   };
 
+  const openHandlingFeeEdit = (category) => {
+    setHandlingFeeData({
+      categoryId: category._id || category.id,
+      handlingFee: category.handlingFee || 0
+    });
+    setShowHandlingFeeEdit(true);
+  };
+
   const resetForm = () => {
     setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
     setShowAddForm(false);
     setShowAddSubForm(false);
     setShowEditForm(false);
+    setShowHandlingFeeEdit(false);
     setSelectedCategory(null);
+    setHandlingFeeData({ categoryId: '', handlingFee: '' });
   };
 
   const getSubCategories = (categoryId) => {
@@ -249,6 +284,9 @@ const CategoryManagementDashboard = () => {
                         Description
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Handling Fee (Subcategories Only)
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -283,10 +321,17 @@ const CategoryManagementDashboard = () => {
                                 />
                               )}
                               <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Main</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-gray-500 max-w-xs truncate">{category.description}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 font-medium flex items-center gap-2">
+                              <span className="text-gray-400">Main Category</span>
+                              <span className="text-xs text-gray-500">(No handling fee)</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -338,10 +383,24 @@ const CategoryManagementDashboard = () => {
                                       />
                                     )}
                                     <span className="text-sm font-medium text-gray-900">{subCategory.name}</span>
+                                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Sub</span>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4">
                                   <div className="text-sm text-gray-500 max-w-xs truncate">{subCategory.description}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900 font-medium flex items-center gap-2">
+                                    ₹{subCategory.handlingFee || 0}
+                                    <button
+                                      onClick={() => openHandlingFeeEdit(subCategory)}
+                                      className="text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors"
+                                      aria-label="Edit handling fee"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </button>
+                                    <span className="text-xs text-green-600 font-medium">Subcategory</span>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -417,36 +476,40 @@ const CategoryManagementDashboard = () => {
                           />
                         )}
                         <h3 className="font-medium text-gray-900">{category.name}</h3>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Main</span>
                       </div>
                       
-                      <div className="mt-3 flex justify-between items-center">
-                        <span className="text-xs text-gray-500">
-                          {new Date(category.createdAt).toLocaleDateString()}
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openAddSubCategoryForm(category)}
-                            className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors"
-                            aria-label="Add subcategory"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => openEditForm(category)}
-                            className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
-                            aria-label="Edit category"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => openDeleteDialog(category)}
-                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
-                            aria-label="Delete category"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                                              <div className="mt-3 flex justify-between items-center">
+                          <span className="text-xs text-gray-500">
+                            {new Date(category.createdAt).toLocaleDateString()}
+                          </span>
+                          <div className="flex gap-2">
+                            <span className="text-xs text-gray-400 font-medium">
+                              Main Category
+                            </span>
+                            <button
+                              onClick={() => openAddSubCategoryForm(category)}
+                              className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors"
+                              aria-label="Add subcategory"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => openEditForm(category)}
+                              className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
+                              aria-label="Edit category"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => openDeleteDialog(category)}
+                              className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
+                              aria-label="Delete category"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
                       {expandedCategories.includes(category._id || category.id) && (
                         <div className="mt-3 pl-6 space-y-3">
@@ -461,16 +524,30 @@ const CategoryManagementDashboard = () => {
                                   />
                                 )}
                                 <h4 className="text-sm font-medium text-gray-800">{subCategory.name}</h4>
+                                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Sub</span>
                               </div>
                               <div className="mt-2 flex justify-between items-center">
                                 <span className="text-xs text-gray-500">
                                   {new Date(subCategory.createdAt).toLocaleDateString()}
                                 </span>
                                 <div className="flex gap-2">
+                                  <span className="text-xs text-gray-700 font-medium">
+                                    ₹{subCategory.handlingFee || 0}
+                                  </span>
+                                  <span className="text-xs text-green-600 font-medium">
+                                    Subcategory
+                                  </span>
                                   <button
                                     onClick={() => openEditForm(subCategory)}
                                     className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
                                     aria-label="Edit subcategory"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => openHandlingFeeEdit(subCategory)}
+                                    className="text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors"
+                                    aria-label="Edit handling fee"
                                   >
                                     <Edit className="h-4 w-4" />
                                   </button>
@@ -787,6 +864,77 @@ const CategoryManagementDashboard = () => {
                   {actionError && (
                     <div className="text-red-500 text-sm mt-2">{actionError}</div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Handling Fee Edit Modal */}
+            {showHandlingFeeEdit && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
+                  <div className="flex justify-between items-center mb-4 sm:mb-6">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                      Update Handling Fee
+                    </h2>
+                    <button
+                      onClick={resetForm}
+                      className="text-gray-400 hover:text-gray-600 p-1"
+                      aria-label="Close modal"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Note:</strong> Handling fees are only applied to subcategories (categories with parent categories). 
+                      Main categories do not have handling fees.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Handling Fee (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter handling fee amount"
+                        value={handlingFeeData.handlingFee}
+                        onChange={(e) => setHandlingFeeData({ ...handlingFeeData, handlingFee: e.target.value })}
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="flex gap-3 pt-3 sm:pt-4">
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="flex-1 px-4 py-2 text-sm sm:text-base text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleUpdateHandlingFee}
+                        className="flex-1 px-4 py-2 text-sm sm:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? (
+                          <>
+                            Updating...
+                            <Check className="h-4 w-4" />
+                          </>
+                        ) : 'Update Fee'}
+                      </button>
+                    </div>
+                    {actionError && (
+                      <div className="text-red-500 text-sm mt-2">{actionError}</div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
