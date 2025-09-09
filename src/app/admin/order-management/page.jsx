@@ -272,7 +272,7 @@ const OrderManagementDashboard = () => {
             Order Management
           </h2>
           
-          <div className="w-full md:w-auto grid grid-cols-1 sm:grid-cols-2 md:flex gap-2 md:gap-3">
+          <div className="w-full md:w-auto grid grid-cols-1 sm:grid-cols-2 md:flex gap-2 md:gap-3 text-gray-800">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -359,11 +359,11 @@ const OrderManagementDashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="mt-3 flex justify-between items-center">
+                    <div className="mt-3 flex justify-between items-center text-gray-800">
                       {order.deliveryAssociate?.associate ? (
                         <div className="text-xs">
                           <div className="text-gray-700">
-                            {order.deliveryAssociate.associate.firstName}
+                            {order.deliveryAssociate.associate.name}
                           </div>
                         </div>
                       ) : (
@@ -459,12 +459,20 @@ const OrderManagementDashboard = () => {
                         {formatDate(order.createdAt)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        {order.deliveryAssociate?.associate ? (
+                        {order.deliveryAssociate? (
                           <div className="text-xs">
                             <div className="font-medium text-gray-900">
-                              {order.deliveryAssociate.associate.firstName}
+                              {order.deliveryAssociate?.name ||                                
+                               'Delivery Associate'}
                             </div>
-                            <div className="text-gray-500">{order.deliveryAssociate.associate.phone}</div>
+                          </div>
+                        ) : order.deliveryAssociate ? (
+                          <div className="text-xs">
+                            <div className="font-medium text-gray-900">
+                              {order.deliveryAssociate?.name || 
+                               'Delivery Associate'}
+                            </div>
+                            
                           </div>
                         ) : (
                           <span className="text-xs text-gray-400">Not assigned</span>
@@ -650,10 +658,10 @@ const OrderManagementDashboard = () => {
                     Delivery Information
                   </h4>
                   <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
-                    {selectedOrder?.deliveryAssociate?.associate ? (
+                    {selectedOrder?.deliveryAssociate? (
                       <div>
-                        <p><span className="font-medium">Assigned to:</span> {selectedOrder.deliveryAssociate.associate.firstName} {selectedOrder.deliveryAssociate.associate.lastName}</p>
-                        <p><span className="font-medium">Contact:</span> {selectedOrder.deliveryAssociate.associate.phone}</p>
+                        <p><span className="font-medium">Assigned to:</span> {selectedOrder.deliveryAssociate.name || selectedOrder.deliveryAssociate.associate.name}</p>
+                        <p><span className="font-medium">Contact:</span> {selectedOrder.deliveryAssociate.associate.phone || 'N/A'}</p>
                         <p><span className="font-medium">Assigned at:</span> {formatDate(selectedOrder.deliveryAssociate.assignedAt)}</p>
                       </div>
                     ) : (
