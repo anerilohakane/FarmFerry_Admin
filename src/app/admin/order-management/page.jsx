@@ -130,6 +130,7 @@ const OrderManagementDashboard = () => {
       }
 
       const response = await getAllOrders(params, token);
+      console.log("order=",response)
       setOrders(response.orders || []);
       setPagination(prev => ({
         ...prev,

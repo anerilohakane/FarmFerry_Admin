@@ -734,25 +734,121 @@ const Dashboard = () => {
       ]);
 
       // Orders mapping
-      setOrders((ordersRes.data.orders || []).map(order => ({
-        id: order._id,
-        customer: order.customerName || order.customer?.firstName || 'N/A',
-        items: order.items?.length || 0,
-        total: `₹${order.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        status: order.status,
-        date: order.createdAt ? order.createdAt.split('T')[0] : '',
-      })));
+      // console.log("Orders API response:", ordersRes.data.orders);
+      // console.log("ordersRes:",ordersRes)
+      // console.log(ordersRes.data.orders)
+  //     setOrders((ordersRes.data.orders || []).map(order => ({
+  // id: order._id,
+  // customer: order.customer
+  //   ? `${order.customer.firstName || ""} ${order.customer.lastName || ""}`.trim()
+  //       || order.customer.phone
+  //       || order.customer.email
+  //       || "N/A"
+  //   : "N/A",
+  // customer: order.customer
+  // ? `${order.customer.firstName || ""} ${order.customer.lastName || ""}`.trim() || "N/A"
+  // : "N/A",
+//   items: order.items?.length || 0,
+//   total: `₹${order.totalAmount?.toLocaleString("en-IN", {
+//     minimumFractionDigits: 2,
+//     maximumFractionDigits: 2
+//   })}`,
+//   status: order.status,
+//   date: order.createdAt ? order.createdAt.split("T")[0] : ""
+// })));
+
+//       setOrders((ordersRes.data.orders || []).map(order => {
+//   let customerName = 'N/A';
+
+//   if (order.customer) {
+//     // If firstName or lastName exist, use them
+//     if (order.customer.firstName || order.customer.lastName) {
+//       customerName = `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+//     } 
+//     // Otherwise, fallback to phone
+//     else if (order.customer.phone) {
+//       customerName = order.customer.phone;
+//     }
+//   }
+
+//   return {
+//     id: order._id,
+//     customer: customerName,
+//     items: order.items?.length || 0,
+//     total: `₹${order.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+//     status: order.status,
+//     date: order.createdAt ? order.createdAt.split('T')[0] : '',
+//   };
+// }));
+
+      console.log("Orders API response:", ordersRes.data.orders);
+      setOrders((ordersRes.data.orders || []).map(order => {
+  let customerName = 'N/A';
+
+  if (order.customer) {
+    // ✅ Priority 1: firstName + lastName
+    if (order.customer.firstName || order.customer.lastName) {
+      customerName = `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+    } 
+    // ✅ Priority 2: fallback to address name (first address only)
+    else if (order.customer.addresses?.length > 0 && order.customer.addresses[0].name) {
+      customerName = order.customer.addresses[0].name;
+    }
+    // ✅ Priority 3: fallback to phone
+    else if (order.customer.phone) {
+      customerName = order.customer.phone;
+    }
+  }
+  console.log("order:",order)
+
+  return {
+    id: order.orderId ,
+    customer: customerName,
+    items: order.items?.length || 0,
+    total: `₹${order.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    status: order.status,
+    date: order.createdAt ? order.createdAt.split('T')[0] : '',
+  };
+}));
+
+
 
       // Activities (if backend provides, else derive from orders)
-      setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => ({
-        id: idx + 1,
-        type: 'order',
-        user: order.customerName || order.customer?.firstName || 'N/A',
-        action: `placed a new order`,
-        time: new Date(order.createdAt).toLocaleString(),
-        icon: ShoppingCart,
-        color: 'blue',
-      })));
+      // setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => ({
+      //   id: idx + 1,
+      //   type: 'order',
+      //   user: order.customerName || order.customer?.firstName || 'N/A',
+      //   action: `placed a new order`,
+      //   time: new Date(order.createdAt).toLocaleString(),
+      //   icon: ShoppingCart,
+      //   color: 'blue',
+      // })));
+
+      // Activities (if backend provides, else derive from orders)
+setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
+  let customerName = 'N/A';
+
+  if (order.customerName) {
+    customerName = order.customerName;
+  } else if (order.customer?.firstName || order.customer?.lastName) {
+    customerName = `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+  } else if (order.customer?.addresses?.length > 0 && order.customer.addresses[0].name) {
+    customerName = order.customer.addresses[0].name;
+  } else if (order.customer?.phone) {
+    customerName = order.customer.phone;
+  }
+
+  return {
+    id: idx + 1,
+    type: 'order',
+    user: customerName,
+    action: `placed a new order`,
+    time: new Date(order.createdAt).toLocaleString(),
+    icon: ShoppingCart,
+    color: 'blue',
+  };
+}));
+
 
       // Chart data
       setChartData(revenueRes.data.chartData || []);
@@ -768,6 +864,7 @@ const Dashboard = () => {
       setFirstLoad(false);
     }
   };
+  // console.log("fetchDashboardData:",fetchDashboardData)
 
   // Initial and auto-refresh fetch
   useEffect(() => {
