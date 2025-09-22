@@ -106,12 +106,12 @@ const AdminLayout = ({ children }) => {
       description: 'Customer reviews',
       route: '/admin/review-management'
     },
-    { 
-      icon: BarChart3, 
-      label: 'Reports & Analytics',
-      description: 'Sales & Performance',
-      route: '/admin/reports-analytics'
-    },
+    // { 
+    //   icon: BarChart3, 
+    //   label: 'Reports & Analytics',
+    //   description: 'Sales & Performance',
+    //   route: '/admin/reports-analytics'
+    // },
     { 
       icon: Settings, 
       label: 'Settings',
