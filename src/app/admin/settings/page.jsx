@@ -140,7 +140,7 @@ const SettingsPage = () => {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'password', label: 'Password', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
+    // { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield }
   ];
 
@@ -215,7 +215,7 @@ const SettingsPage = () => {
 
                 <div className="space-y-6">
                   {/* Avatar Section */}
-                  <div className="flex items-center gap-6">
+                  {/* <div className="flex items-center gap-6">
                     <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center overflow-hidden">
                       {profileData.avatar ? (
                         <img src={profileData.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -243,7 +243,7 @@ const SettingsPage = () => {
                       <p className="text-sm text-gray-500 mt-1">JPG, PNG up to 5MB</p>
                       {avatarError && <p className="text-sm text-red-500 mt-1">{avatarError}</p>}
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
