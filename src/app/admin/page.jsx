@@ -145,44 +145,62 @@ const Dashboard = () => {
       ]);
 
       // Orders mapping
-      setOrders((ordersRes.data.orders || []).map(order => {
-        const displayStatus = (() => {
-          switch (order.status) {
-            case 'pending': return 'Pending';
-            case 'processing': return 'Processing';
-            case 'out_for_delivery': return 'Out for delivery';
-            case 'delivered': return 'Delivered';
-            case 'cancelled': return 'Cancelled';
-            case 'returned': return 'Returned';
-            case 'damaged': return 'Damaged';
-            case 'packaging': return 'Packaging';
-            default: return order.status || 'Unknown';
-          }
-        })();
+      console.log("ordersres:",ordersRes.data.orders);
+     setOrders((ordersRes.data.orders || []).map(order => {
+  let customerName = 'N/A';
 
-        const customerName = order.customer?.firstName || order.customerName || 'N/A';
-        const lastName = order.customer?.lastName ? ` ${order.customer.lastName}` : '';
+  if (order.customer) {
+    // ✅ Priority 1: firstName + lastName
+    if (order.customer.firstName || order.customer.lastName) {
+      customerName = `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+    } 
+    // ✅ Priority 2: fallback to address name (first address only)
+    else if (order.customer.addresses?.length > 0 && order.customer.addresses[0].name) {
+      customerName = order.customer.addresses[0].name;
+    }
+    // ✅ Priority 3: fallback to phone
+    else if (order.customer.phone) {
+      customerName = order.customer.phone;
+    }
+  }
 
-        return {
-          id: order._id,
-          customer: `${customerName}${lastName}`,
-          items: order.items?.length || 0,
-          total: `₹${(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          status: displayStatus,
-          date: order.createdAt ? order.createdAt.split('T')[0] : '',
-        };
-      }));
+  return {
+    id: order.orderId,
+    customer: customerName,
+    items: order.items?.length || 0,
+    total: `₹${order.totalAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    status: order.status,
+    date: order.createdAt ? order.createdAt.split('T')[0] : '',
+  };
+}));
+
 
       // Activities (derive from orders)
-      setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => ({
-        id: idx + 1,
-        type: 'order',
-        user: `${order.customer?.firstName || order.customerName || 'N/A'}${order.customer?.lastName ? ' ' + order.customer.lastName : ''}`,
-        action: 'placed a new order',
-        time: new Date(order.createdAt).toLocaleString(),
-        icon: ShoppingCart,
-        color: 'blue',
-      })));
+    
+setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
+  let customerName = 'N/A';
+
+  if (order.customerName) {
+    customerName = order.customerName;
+  } else if (order.customer?.firstName || order.customer?.lastName) {
+    customerName = `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+  } else if (order.customer?.addresses?.length > 0 && order.customer.addresses[0].name) {
+    customerName = order.customer.addresses[0].name;
+  } else if (order.customer?.phone) {
+    customerName = order.customer.phone;
+  }
+
+  return {
+    id: idx + 1,
+    type: 'order',
+    user: customerName,
+    action: `placed a new order`,
+    time: new Date(order.createdAt).toLocaleString(),
+    icon: ShoppingCart,
+    color: 'blue',
+  };
+}));
+
 
       // Build chart datasets
       const revenueSeries = (revenueRes.data.analytics?.data || []).map(d => ({
@@ -597,19 +615,20 @@ const Dashboard = () => {
                   placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
                 />
               </div>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
               >
                 <option value="all">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Processing">Processing</option>
-                <option value="Out for delivery">Out for delivery</option>
-                <option value="Delivered">Delivered</option>
+                <option value="pending">Pending</option>
+                <option value="packaging">Packaging</option>
+                <option value="out_for_delivery">Out for delivery</option>
+                <option value="delivered">Delivered</option>
+
               </select>
             </div>
           </div>
@@ -654,7 +673,8 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
-
+           
+          
           {filteredOrders.length === 0 && (
             <div className="p-4 sm:p-6 text-center text-xs sm:text-sm text-gray-500">
               No orders found matching your criteria.
