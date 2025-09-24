@@ -230,7 +230,9 @@ setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
       })));
 
       // Top products
+      console.log("topproductsres:",productRes)
       const top = productRes.data.topSellingProducts || [];
+      
       setTopProducts(top.map(p => ({
         image: p.product?.images?.[0]?.url || '/images/file.svg',
         name: p.product?.name || 'Unknown',
