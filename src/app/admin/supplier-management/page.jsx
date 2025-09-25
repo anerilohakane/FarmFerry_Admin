@@ -27,6 +27,8 @@ const SupplierManagementDashboard = () => {
 
   // Add Supplier modal and logic
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
   const [newSupplier, setNewSupplier] = useState({
     businessName: '',
     ownerName: '',
@@ -34,6 +36,8 @@ const SupplierManagementDashboard = () => {
     phone: '',
     status: 'pending',
     address: { street: '' },
+    password: '',
+    confirmPassword: '',
   });
 
   const handleAddChange = (field, value) => {
@@ -49,15 +53,32 @@ const SupplierManagementDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      await fetch(`${API_URL}/api/v1/admin/suppliers`, {
+      if (newSupplier.password && newSupplier.password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+      if ((newSupplier.password || newSupplier.confirmPassword) && newSupplier.password !== newSupplier.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+      const payload = { ...newSupplier };
+      delete payload.confirmPassword;
+      const res = await fetch(`${API_URL}/api/v1/admin/suppliers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newSupplier),
+        body: JSON.stringify(payload),
       });
+      const created = await res.json();
       setShowAddModal(false);
+      if (created?.data?.supplier) {
+        setCreatedCredentials({
+          email: created.data.supplier.email,
+          password: created?.data?.tempPassword || newSupplier.password || '',
+          businessName: created.data.supplier.businessName,
+        });
+        setShowCredentialsModal(true);
+      }
       setNewSupplier({
         businessName: '',
         ownerName: '',
@@ -65,10 +86,12 @@ const SupplierManagementDashboard = () => {
         phone: '',
         status: 'pending',
         address: { street: '' },
+        password: '',
+        confirmPassword: '',
       });
       fetchSuppliers();
-    } catch {
-      setError('Failed to add supplier');
+    } catch (e) {
+      setError(e?.message || 'Failed to add supplier');
     }
     setLoading(false);
   };
@@ -633,6 +656,25 @@ const SupplierManagementDashboard = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Password (optional)</label>
+                    <input
+                      type="password"
+                      value={newSupplier.password}
+                      onChange={(e) => handleAddChange('password', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                      placeholder="Leave blank to auto-generate"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={newSupplier.confirmPassword}
+                      onChange={(e) => handleAddChange('confirmPassword', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">Phone</label>
                     <input
                       type="tel"
@@ -720,6 +762,34 @@ const SupplierManagementDashboard = () => {
                 <div><span className="font-medium">publicId:</span> {previewedDocument.publicId || '-'}</div>
                 {previewedDocument.rejectionReason && <div className="col-span-2"><span className="font-medium text-red-600">Rejection Reason:</span> {previewedDocument.rejectionReason}</div>}
                 {previewedDocument.url && <div className="col-span-2"><a href={previewedDocument.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm sm:text-base">Download/View Original</a></div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Credentials Modal */}
+        {showCredentialsModal && createdCredentials && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="bg-white rounded-lg w-full max-w-xs sm:max-w-md">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Supplier Credentials</h2>
+              </div>
+              <div className="p-4 sm:p-6 space-y-3">
+                <p className="text-sm sm:text-base text-gray-700">Share these credentials with the supplier to log in to the Supplier app.</p>
+                <div className="bg-gray-50 border border-gray-200 rounded p-3 text-sm sm:text-base">
+                  <div><span className="font-medium">Business:</span> {createdCredentials.businessName}</div>
+                  <div><span className="font-medium">Email:</span> {createdCredentials.email}</div>
+                  <div><span className="font-medium">Password:</span> {createdCredentials.password}</div>
+                </div>
+                <div className="text-xs text-gray-500">For security, ask the supplier to change their password after first login.</div>
+              </div>
+              <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={() => { setShowCredentialsModal(false); setCreatedCredentials(null); }}
+                  className="px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                >
+                  Done
+                </button>
               </div>
             </div>
           </div>
