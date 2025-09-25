@@ -562,9 +562,9 @@ setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
           <div className="p-4 sm:p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-              <button className="text-green-600 hover:text-green-700 text-sm font-medium transition-all duration-300">
+              {/* <button className="text-green-600 hover:text-green-700 text-sm font-medium transition-all duration-300">
                 View all
-              </button>
+              </button> */}
             </div>
           </div>
           <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
@@ -591,9 +591,9 @@ setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
                     <span>{activity.time}</span>
                   </div>
                 </div>
-                <button className="text-gray-400 hover:text-gray-600 transition-all duration-300">
+                {/* <button className="text-gray-400 hover:text-gray-600 transition-all duration-300">
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
+                </button> */}
               </div>
             ))}
           </div>
@@ -604,9 +604,9 @@ setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
           <div className="p-4 sm:p-6 border-b border-gray-200">
             <div className="flex justify-between items-center mb-3 sm:mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
-              <button className="text-green-600 hover:text-green-700 text-sm font-medium">
+              {/* <button className="text-green-600 hover:text-green-700 text-sm font-medium">
                 View all
-              </button>
+              </button> */}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -690,9 +690,9 @@ setActivities((ordersRes.data.orders || []).slice(0, 5).map((order, idx) => {
         <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">Top Selling Products</h3>
-            <button className="text-green-600 hover:text-green-700 text-sm font-medium">
+            {/* <button className="text-green-600 hover:text-green-700 text-sm font-medium">
               View all
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
