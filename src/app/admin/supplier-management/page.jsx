@@ -18,7 +18,9 @@ const SupplierManagementDashboard = () => {
   const [approvalAction, setApprovalAction] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  
+
+  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
   // Add edit modal and logic
   const [showEditModal, setShowEditModal] = useState(false);

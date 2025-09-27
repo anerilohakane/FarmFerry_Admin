@@ -1,6 +1,7 @@
 // src/utils/api.js
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:9000'; // Updated to match backend port
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+//  || 'http://localhost:9000'; // Updated to match backend port
 
 export async function apiRequest(endpoint, { method = 'GET', body, headers = {}, token, isFormData } = {}) {
   // Do not send token for login or register endpoints
