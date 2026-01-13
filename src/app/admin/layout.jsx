@@ -27,6 +27,10 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAdminProfile } from '../../context/AdminProfileContext';
+import { 
+  getAdminNotifications, 
+  markNotificationsRead 
+} from '@/utils/api';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -120,42 +124,58 @@ const AdminLayout = ({ children }) => {
     },
   ];
 
-  const initialNotifications = [
-    {
-      id: 1,
-      type: 'order',
-      title: 'New Order Received',
-      message: 'Order #12349 from Sarah Johnson',
-      time: '2 minutes ago',
-      unread: true,
-      icon: ShoppingCart,
-      color: 'blue'
-    },
-    {
-      id: 2,
-      type: 'user',
-      title: 'New Customer Registered',
-      message: 'Michael Brown joined Farm Ferry',
-      time: '5 minutes ago',
-      unread: true,
-      icon: Users,
-      color: 'green'
-    },
-    {
-      id: 3,
-      type: 'alert',
-      title: 'System Alert',
-      message: 'Dashboard updated successfully',
-      time: '1 hour ago',
-      unread: false,
-      icon: AlertCircle,
-      color: 'red'
-    }
-  ];
+// Notification APIs imported at top
+
 
   useEffect(() => {
-    setNotifications(initialNotifications);
-  }, []);
+    let interval;
+    const fetchNotifications = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const data = await getAdminNotifications(token);
+        // Map backend notifications to UI format
+        const formattedNotifications = data.notifications.map(n => {
+           let icon = AlertCircle;
+           let color = 'blue';
+
+           if (n.type === 'new_order') {
+             icon = ShoppingCart;
+             color = 'green';
+           } else if (n.type === 'low_stock') {
+             icon = Package;
+             color = 'orange'; // Changed to orange for low stock visualization
+           } else if (n.type === 'out_of_stock') {
+             icon = AlertCircle; 
+             color = 'red';
+           } else if (n.type === 'order_status_update') {
+             icon = Truck;
+             color = 'purple';
+           }
+
+           return {
+             id: n._id,
+             title: n.title,
+             message: n.message,
+             time: new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Simplified time
+             unread: !n.isRead,
+             icon,
+             color
+           };
+        });
+        
+        setNotifications(formattedNotifications);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+    interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+
+    return () => clearInterval(interval);
+  }, []); // Run on mount
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -184,18 +204,34 @@ const AdminLayout = ({ children }) => {
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
-  const markAsRead = (id) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id ? { ...notification, unread: false } : notification
-      )
-    );
+  const markAsRead = async (id) => {
+    try {
+        const token = localStorage.getItem('token');
+        await markNotificationsRead([id], false, token);
+        
+        // Optimistic update
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === id ? { ...notification, unread: false } : notification
+          )
+        );
+    } catch (error) {
+        console.error("Failed to mark read:", error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, unread: false }))
-    );
+  const markAllAsRead = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        await markNotificationsRead([], true, token);
+
+        // Optimistic update
+        setNotifications(prev =>
+          prev.map(notification => ({ ...notification, unread: false }))
+        );
+    } catch (error) {
+        console.error("Failed to mark all read:", error);
+    }
   };
 
   const handleItemClick = (item) => {

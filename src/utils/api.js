@@ -257,6 +257,21 @@ export async function changeAdminPassword(passwords, token) {
   });
 } 
 
+// Notification API utilities
+export async function getAdminNotifications(token) {
+  const res = await apiRequest('/api/v1/admin/notifications', { method: 'GET', token });
+  return res.data; // returns { notifications: [], unreadCount: 0 }
+}
+
+export async function markNotificationsRead(notificationIds, markAll, token) {
+  const body = { notificationIds, markAll };
+  await apiRequest('/api/v1/admin/notifications/mark-read', {
+    method: 'PUT',
+    body,
+    token
+  });
+}
+
 // Review Management API utilities
 export async function getAllReviews(params = {}, token) {
   const queryString = new URLSearchParams(params).toString();
