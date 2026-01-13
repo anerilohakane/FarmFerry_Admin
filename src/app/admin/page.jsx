@@ -94,7 +94,7 @@ const Dashboard = () => {
         productRes,
         customerRes
       ] = await Promise.all([
-        apiRequest('/api/v1/admin/dashboard-stats', { token }),
+        apiRequest('/api/v1/admin/dashboard/stats', { token }),
         apiRequest('/api/v1/orders?limit=10&sort=createdAt&order=desc', { token }),
         apiRequest(`/api/v1/admin/analytics/revenue?period=${encodeURIComponent(period)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, { token }),
         apiRequest(`/api/v1/admin/analytics/products`, { token }),

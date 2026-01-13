@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FiEdit, FiTrash2, FiCheck, FiX, FiUserPlus, FiSearch, FiFilter, FiRefreshCw, FiInfo, FiTruck, FiMapPin, FiAward } from 'react-icons/fi';
-import { createDeliveryAssociate, updateDeliveryAssociate, deleteDeliveryAssociate, getAllDeliveryAssociates } from '../../../utils/api';
+import { createDeliveryAssociate, updateDeliveryAssociate, deleteDeliveryAssociate, getAllDeliveryAssociates, apiRequest } from '../../../utils/api';
 
 // Toast notification component
 const Toast = ({ message, onClose }) => (
@@ -157,16 +157,10 @@ const DeliveryAssociateManagement = () => {
   const confirmApproval = async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const res = await fetch(`${API_BASE_URL}/api/v1/delivery-associates/${selectedAssociate._id}/approve`, {
+      const res = await apiRequest(`/api/v1/delivery-associates/${selectedAssociate._id}/approve`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!res.ok) throw new Error('Failed to update approval');
-      const updated = await res.json();
+      }, token);
+      const updated = res;
       setAssociates(prev =>
         prev.map(a =>
           a._id === selectedAssociate._id ? { ...a, isVerified: updated.data.isVerified } : a

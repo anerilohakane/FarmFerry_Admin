@@ -5,6 +5,7 @@ import {
   Search, Check, X, Building2, Mail, Phone, MapPin, User, DollarSign, Star, AlertCircle, Eye, Edit
 } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/utils/api';
 
 const SupplierManagementDashboard = () => {
   const { token } = useAuth();
@@ -63,21 +64,17 @@ const SupplierManagementDashboard = () => {
       }
       const payload = { ...newSupplier };
       delete payload.confirmPassword;
-      const res = await fetch(`${API_URL}/api/v1/admin/suppliers`, {
+      const res = await apiRequest('/api/v1/supplier/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+        body: payload
       });
-      const created = await res.json();
+      const created = res;
       setShowAddModal(false);
-      if (created?.data?.supplier) {
+      if (created?.data?.user) {
         setCreatedCredentials({
-          email: created.data.supplier.email,
-          password: created?.data?.tempPassword || newSupplier.password || '',
-          businessName: created.data.supplier.businessName,
+          email: created.data.user.email,
+          password: newSupplier.password || '',
+          businessName: created.data.user.businessName,
         });
         setShowCredentialsModal(true);
       }
@@ -108,10 +105,8 @@ const SupplierManagementDashboard = () => {
       if (statusFilter !== "all") params.append("status", statusFilter);
       params.append("page", 1);
       params.append("limit", 50);
-      const res = await fetch(`${API_URL}/api/v1/admin/suppliers?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const res = await apiRequest(`/api/v1/admin/suppliers?${params.toString()}`);
+      const data = res;
       setSuppliers(data.data?.suppliers || []);
       console.log('Fetched suppliers:', data.data?.suppliers || []);
     } catch (err) {
@@ -142,10 +137,8 @@ const SupplierManagementDashboard = () => {
   const handleViewDetails = async (supplier) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/admin/suppliers/${supplier._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const res = await apiRequest(`/api/v1/admin/suppliers/${supplier._id}`);
+      const data = res;
       console.log('Supplier details API response:', data);
       setSelectedSupplier(data.data?.supplier); // FIXED: use data.data.supplier
       setShowDetailsModal(true);
@@ -166,13 +159,9 @@ const SupplierManagementDashboard = () => {
     if (selectedSupplier && approvalAction) {
       setLoading(true);
       try {
-        await fetch(`${API_URL}/api/v1/admin/suppliers/${selectedSupplier._id}/status`, {
+        await apiRequest(`/api/v1/admin/suppliers/${selectedSupplier._id}/status`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: approvalAction }),
+          body: { status: approvalAction }
         });
         setShowApprovalDialog(false);
         setSelectedSupplier(null);
@@ -199,13 +188,9 @@ const SupplierManagementDashboard = () => {
     if (!editingSupplier) return;
     setLoading(true);
     try {
-      await fetch(`${API_URL}/api/v1/admin/suppliers/${editingSupplier._id}`, {
+      await apiRequest(`/api/v1/admin/suppliers/${editingSupplier._id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editingSupplier),
+        body: editingSupplier
       });
       setShowEditModal(false);
       setEditingSupplier(null);

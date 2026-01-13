@@ -36,7 +36,7 @@ const CategoryManagementDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiRequest('/api/v1/categories?includeInactive=true');
+      const data = await apiRequest('/api/v1/admin/category?includeInactive=true');
       let arr = [];
       if (Array.isArray(data.data?.categories)) {
         arr = data.data.categories;
@@ -80,14 +80,15 @@ const CategoryManagementDashboard = () => {
       const submitData = new FormData();
       submitData.append('name', formData.name);
       submitData.append('description', formData.description);
-      submitData.append('isActive', formData.status === 'Active');
+      // Explicitly convert boolean to string for clarity, though FormData handles it.
+      submitData.append('isActive', String(formData.status === 'Active')); 
       if (formData.image) {
         submitData.append('image', formData.image);
       }
       if (formData.parentId) {
         submitData.append('parent', formData.parentId);
       }
-      await apiRequest('/api/v1/categories', {
+      await apiRequest('/api/v1/admin/category', {
         method: 'POST',
         body: submitData,
         isFormData: true
@@ -96,6 +97,7 @@ const CategoryManagementDashboard = () => {
       setShowAddForm(false);
       setShowAddSubForm(false);
       setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
+      alert('Category added successfully');
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -112,14 +114,29 @@ const CategoryManagementDashboard = () => {
       const submitData = new FormData();
       submitData.append('name', formData.name);
       submitData.append('description', formData.description);
-      submitData.append('isActive', formData.status === 'Active');
+      submitData.append('isActive', String(formData.status === 'Active'));
       if (formData.image) {
         submitData.append('image', formData.image);
       }
       if (formData.parentId) {
         submitData.append('parent', formData.parentId);
+      } else {
+        // If no parentId, explicitly send null if it was previously set, or just don't append if backend handles it?
+        // Backend logic now handles 'null' string if passed, or absence.
+        // If it's a top level category, let's ensure we don't accidentally set it to undefined/null string unless intended.
+        // Actually, if it's top level, frontend parentId is null.
+        // Let's send 'null' if we want to remove parent, but frontend logic currently clears parentId to null for top level.
+        // For safety, let's send 'null' string if parentId is null? 
+        // Existing logic didn't send 'parent' key if null. Backend might interpret missing key as "no change" or "null" depending on implementation.
+        // The backend update logic I wrote: if (parent && parent !== 'null' ...) else if (parent === 'null') updateData.parent = null
+        // So effectively, if I don't send 'parent', it won't change.
+        // If I want to change a subcategory to a main category, I need to send parent='null'.
+        // Frontend logic for edits: openEditForm sets parentId. If user edits, can they remove parent? The UI doesn't seem to have a "remove parent" dropdown easily, but let's be safe.
+        // If parentId is explicitly null, maybe we should send 'null'?
+        // However, standard use case is just editing name/desc/image.
       }
-      await apiRequest(`/api/v1/categories/${selectedCategory._id}`, {
+      
+      await apiRequest(`/api/v1/admin/category/${selectedCategory._id}`, {
         method: 'PUT',
         body: submitData,
         isFormData: true
@@ -128,6 +145,7 @@ const CategoryManagementDashboard = () => {
       setShowEditForm(false);
       setSelectedCategory(null);
       setFormData({ name: '', description: '', status: 'Active', image: null, parentId: null });
+      alert('Category updated successfully');
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -141,7 +159,7 @@ const CategoryManagementDashboard = () => {
     setActionLoading(true);
     setActionError('');
     try {
-      await apiRequest(`/api/v1/categories/${selectedCategory._id || selectedCategory.id}`, {
+      await apiRequest(`/api/v1/admin/category/${selectedCategory._id || selectedCategory.id}`, {
         method: 'DELETE',
       });
       await fetchCategories();
@@ -160,7 +178,7 @@ const CategoryManagementDashboard = () => {
     setActionLoading(true);
     setActionError('');
     try {
-      await apiRequest('/api/v1/categories/add-handling-fee', {
+      await apiRequest('/api/v1/admin/category/add-handling-fee', {
         method: 'POST',
         body: {
           categoryId: handlingFeeData.categoryId,
@@ -317,7 +335,7 @@ const CategoryManagementDashboard = () => {
                                 <img
                                   src={`${category.image.url}?v=${Date.now()}`}
                                   alt={category.name}
-                                  className="w-10 h-10 object-cover rounded border"
+                                  className="w-10 h-10 object-cover rounded"
                                 />
                               )}
                               <span className="text-sm font-medium text-gray-900">{category.name}</span>
@@ -379,7 +397,7 @@ const CategoryManagementDashboard = () => {
                                       <img
                                         src={`${subCategory.image.url}?v=${Date.now()}`}
                                         alt={subCategory.name}
-                                        className="w-10 h-10 object-cover rounded border"
+                                        className="w-10 h-10 object-cover rounded"
                                       />
                                     )}
                                     <span className="text-sm font-medium text-gray-900">{subCategory.name}</span>
@@ -472,7 +490,7 @@ const CategoryManagementDashboard = () => {
                           <img
                             src={`${category.image.url}?v=${Date.now()}`}
                             alt={category.name}
-                            className="w-10 h-10 object-cover rounded border"
+                            className="w-10 h-10 object-cover rounded"
                           />
                         )}
                         <h3 className="font-medium text-gray-900">{category.name}</h3>
@@ -520,7 +538,7 @@ const CategoryManagementDashboard = () => {
                                   <img
                                     src={`${subCategory.image.url}?v=${Date.now()}`}
                                     alt={subCategory.name}
-                                    className="w-8 h-8 object-cover rounded border"
+                                    className="w-8 h-8 object-cover rounded"
                                   />
                                 )}
                                 <h4 className="text-sm font-medium text-gray-800">{subCategory.name}</h4>
@@ -777,7 +795,7 @@ const CategoryManagementDashboard = () => {
                           <img
                             src={URL.createObjectURL(formData.image)}
                             alt="Preview"
-                            className="w-24 h-24 object-cover rounded border"
+                            className="w-24 h-24 object-cover rounded"
                           />
                         </div>
                       ) : selectedCategory?.image?.url && (

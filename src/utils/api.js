@@ -5,7 +5,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export async function apiRequest(endpoint, { method = 'GET', body, headers = {}, token, isFormData } = {}) {
   // Do not send token for login or register endpoints
-  const isAuthEndpoint = endpoint.startsWith('/api/auth/login') || endpoint.startsWith('/api/auth/register');
+  const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
   if (!isAuthEndpoint && !token && typeof window !== 'undefined') {
     token = localStorage.getItem('token');
   }
@@ -71,14 +71,20 @@ export async function apiRequest(endpoint, { method = 'GET', body, headers = {},
 
 // Product API utilities
 export async function getProducts() {
-  const res = await apiRequest('/api/v1/products', { method: 'GET' });
-  // The backend returns { data: { products: [...] } }
-  return res.data.products;
+  const res = await apiRequest('/api/v1/supplier/products?limit=100', { method: 'GET' });
+  // The backend returns { data: { items: [...] } } or { data: { products: [...] } }
+  // We aliased 'products' to 'items' in the backend response for compatibility
+  // But let's check what I returned: { data: { items, products: items, ... } }
+  // My backend logic returned 'items' and 'products'.
+  // However, apiRequest returns `data` (which is the body).
+  // Body has `data: { items... }`
+  // So `res.data.items` or `res.data.products`
+  return res.data.items || res.data.products || [];
 }
 
 export async function addProduct(product, token) {
   // product is FormData
-  return apiRequest('/api/v1/products', {
+  return apiRequest('/api/v1/supplier/products', {
     method: 'POST',
     body: product,
     token,
@@ -88,7 +94,7 @@ export async function addProduct(product, token) {
 
 export async function updateProduct(id, product, token) {
   // product is FormData
-  return apiRequest(`/api/v1/products/${id}`, {
+  return apiRequest(`/api/v1/supplier/products/${id}`, {
     method: 'PATCH',
     body: product,
     token,
@@ -97,13 +103,13 @@ export async function updateProduct(id, product, token) {
 }
 
 export async function deleteProduct(id, token) {
-  await apiRequest(`/api/v1/products/${id}`, { method: 'DELETE', token });
+  await apiRequest(`/api/v1/supplier/products/${id}`, { method: 'DELETE', token });
 }
 
 export async function getCategories() {
-  const res = await apiRequest('/api/v1/categories', { method: 'GET' });
-  // The backend returns { data: { categories: [...] } }
-  return res.data.categories;
+  const res = await apiRequest('/api/v1/admin/category', { method: 'GET' }); 
+  // The backend returns { success: true, data: [...] }
+  return res.data;
 }
 
 // Order Management API utilities
@@ -186,6 +192,14 @@ export async function loginAdmin(credentials) {
   return res.data;
 }
 
+export async function registerAdmin(adminData) {
+  const res = await apiRequest('/api/v1/auth/register/admin', {
+    method: 'POST',
+    body: adminData,
+  });
+  return res.data;
+}
+
 export async function getCurrentUser(token) {
   const res = await apiRequest('/api/v1/auth/current-user', { method: 'GET', token });
   return res.data.user;
@@ -193,7 +207,7 @@ export async function getCurrentUser(token) {
 
 // Analytics API utilities
 export async function getAdminDashboardStats(token) {
-  return apiRequest('/api/v1/admin/dashboard-stats', { method: 'GET', token });
+  return apiRequest('/api/v1/admin/dashboard/stats', { method: 'GET', token });
 }
 
 // Revenue analytics

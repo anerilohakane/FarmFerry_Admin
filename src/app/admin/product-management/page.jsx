@@ -72,7 +72,8 @@ const ProductManagementDashboard = () => {
       const formDataToSend = newProduct.submitData;
       formDataToSend.set('categoryId', categoryId);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const created = await addProduct(formDataToSend, token);
+      const res = await addProduct(formDataToSend, token);
+      const created = res.data;
       setProducts(prev => [...prev, {
         id: created._id,
         name: created.name,
@@ -107,7 +108,8 @@ const ProductManagementDashboard = () => {
         formDataToSend.append('existingImages', JSON.stringify({ url: editingProduct.imageUrl }));
       }
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const updated = await updateProduct(updatedProduct.id, formDataToSend, token);
+      const res = await updateProduct(updatedProduct.id, formDataToSend, token);
+      const updated = res.data;
       setProducts(prev => prev.map(p => p.id === updatedProduct.id ? {
         id: updated._id,
         name: updated.name,
